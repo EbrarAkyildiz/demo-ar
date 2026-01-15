@@ -1,76 +1,139 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <title>GPS Sabitlenmiş İnşaat AR</title>
+    <title>İnşaat AR - Profesyonel Çözüm</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, precision=highp">
-    <!-- A-Frame ve AR.js (Location Based) Kütüphaneleri -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        #overlay-ui {
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        
+        /* Tam Ekran Video Ayarı */
+        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; position: absolute; }
+        
+        /* Giriş ve İzin Ekranı (Hataları çözen anahtar) */
+        #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 10;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #000; z-index: 9999; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center;
+            color: white; text-align: center; font-family: sans-serif;
         }
-        #dist-info {
-            background: rgba(0,0,0,0.7); color: white; padding: 15px 25px;
-            border-radius: 50px; border: 1px solid rgba(255,255,255,0.2);
-            font-size: 14px; backdrop-filter: blur(10px);
+        #start-btn {
+            background: #0d6efd; color: white; border: none; padding: 20px 50px;
+            font-size: 20px; font-weight: bold; border-radius: 50px; margin-top: 20px; cursor: pointer;
         }
+
+        /* Navigasyon Paneli */
+        #nav-layer {
+            position: fixed; top: 20px; width: 100%; z-index: 100;
+            display: none; flex-direction: column; align-items: center; pointer-events: none;
+        }
+        #nav-box {
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(15px);
+            padding: 15px 30px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.2);
+            color: white; text-align: center;
+        }
+        #arrow { font-size: 40px; display: inline-block; color: #00ff00; }
     </style>
 </head>
 <body>
 
-    <div id="overlay-ui">
-        <div id="dist-info">Hedef konuma yaklaşın...</div>
+    <!-- Giriş Ekranı (Sensörler için kullanıcı etkileşimi şart) -->
+    <div id="splash-screen">
+        <h2>İnşaat AR Projesi</h2>
+        <p>AR Deneyimini başlatmak için dokunun.<br>(Kamera, Konum ve Hareket izni istenecek)</p>
+        <button id="start-btn">SİSTEMİ BAŞLAT</button>
     </div>
 
-    <!-- AR Sahnesi -->
+    <!-- Navigasyon -->
+    <div id="nav-layer">
+        <div id="nav-box">
+            <div id="arrow">↑</div>
+            <div id="dist-txt" style="font-size: 22px; font-weight: bold;">Konum aranıyor...</div>
+            <div id="hint-txt" style="font-size: 12px; opacity: 0.7;">Lütfen ilerleyin</div>
+        </div>
+    </div>
+
     <a-scene
         vr-mode-ui="enabled: false"
         embedded
         arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;">
         
-        <!-- Yüksek Kaliteli Işıklandırma -->
-        <a-entity light="type: hemisphere; intensity: 3"></a-entity>
-        <a-entity light="type: directional; intensity: 1.5; position: 1 2 1"></a-entity>
+        <!-- Işıklandırma Hatası Giderildi -->
+        <a-entity light="type: ambient; intensity: 1.5;"></a-entity>
+        <a-entity light="type: directional; intensity: 1.5;" position="1 1 1"></a-entity>
 
-        <!-- GPS'e SABİTLENMİŞ MODEL -->
-        <!-- model.glb dosyan bu koordinatlara çakılı kalacak -->
+        <!-- Odandaki Model -->
         <a-entity 
-            id="construction-model"
+            id="target-model"
             gltf-model="url(model.glb)"
             gps-entity-place="latitude: 41.017039; longitude: 28.858800;"
-            scale="5 5 5"
-            look-at="[gps-camera]">
+            scale="10 10 10">
         </a-entity>
 
-        <!-- Kullanıcının Kamerası (GPS Takibi Yapan) -->
-        <a-camera gps-camera rotation-reader></a-camera>
+        <a-camera gps-camera="minDistance: 5; gpsMinDistance: 5;" rotation-reader></a-camera>
     </a-scene>
 
     <script>
-        // Mesafe Takibi ve Kullanıcı Bilgilendirme
+        const splash = document.getElementById('splash-screen');
+        const startBtn = document.getElementById('start-btn');
+        const navLayer = document.getElementById('nav-layer');
+        const distTxt = document.getElementById('dist-txt');
+        const arrow = document.getElementById('arrow');
+
+        startBtn.addEventListener('click', () => {
+            // 1. iOS Hareket Sensörü İzni (event.alpha null hatasını çözer)
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+
+            // 2. Ekranı Kapat ve Başlat
+            splash.style.display = 'none';
+            navLayer.style.display = 'flex';
+        });
+
+        function handleOrientation(e) {
+            const alpha = e.webkitCompassHeading || e.alpha;
+            if (alpha) {
+                arrow.style.transform = `rotate(${360 - alpha}deg)`;
+            }
+        }
+
+        // GPS Güncellemesi
         window.addEventListener('gps-camera-update-position', (e) => {
-            const model = document.querySelector('#construction-model');
-            // Mesafe bilgisini al
-            const dist = model.getAttribute('distanceMsg');
-            if (dist) {
-                document.getElementById('dist-info').innerText = `İnşaat Modeli: ${dist}`;
+            const distance = document.getElementById('target-model').getAttribute('distance');
+            if (distance !== null) {
+                const d = Math.round(distance);
+                distTxt.innerText = `${d} Metre Kaldı`;
+                
+                if (d < 5) {
+                    arrow.innerText = "●";
+                    document.getElementById('hint-txt').innerText = "HEDEFE VARILDI";
+                } else {
+                    arrow.innerText = "↑";
+                    document.getElementById('hint-txt').innerText = "Modele doğru yönelin";
+                }
             }
         });
 
-        // Sayfa yüklendiğinde yüksek kalite ayarlarını zorla
-        window.onload = () => {
-             const video = document.querySelector('video');
-             if(video) {
-                 video.style.width = "100%";
-                 video.style.height = "100%";
-                 video.style.objectFit = "cover"; // Video bindirmeyi tam ekran yapar
-             }
-        };
+        // Tam ekran video zorlaması
+        setInterval(() => {
+            const v = document.querySelector('video');
+            if(v) {
+                v.style.maxWidth = "none";
+                v.style.width = "100vw";
+                v.style.height = "100vh";
+            }
+        }, 1000);
     </script>
 </body>
 </html>
