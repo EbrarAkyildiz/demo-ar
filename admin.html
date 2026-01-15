@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <title>AR İnşaat - Admin Panel</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root { --p: #007bff; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        
+        #admin-ui {
+            position: fixed; left: 0; top: 0; width: 350px; height: 100%;
+            background: rgba(15, 15, 15, 0.95); z-index: 1000; padding: 25px;
+            display: flex; flex-direction: column; gap: 15px; overflow-y: auto;
+            border-right: 1px solid #333;
+        }
+        #map { height: 180px; border-radius: 12px; margin: 10px 0; border: 1px solid #444; }
+        .control-group { background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; }
+        label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; font-weight: bold; }
+        input { background: #222; border: 1px solid #333; color: #fff; padding: 8px; border-radius: 6px; width: 100%; margin-bottom: 10px; }
+        
+        .btn { background: var(--p); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
+        .btn-save { background: #28a745; margin-top: 15px; }
+        
+        .project-card { background: #222; padding: 10px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid #333; font-size: 13px; }
+        .project-card.active { border-color: var(--p); background: #2a2a2a; }
+
+        #ar-preview-label { position: fixed; right: 20px; top: 20px; background: rgba(255,0,0,0.6); padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; }
+    </style>
+</head>
+<body>
+
+    <div id="ar-preview-label">CANLI DÜZENLEME MODU</div>
+
+    <div id="admin-ui">
+        <h2 style="margin:0">🏗️ AR Admin</h2>
+        
+        <div id="proj-list-section">
+            <label>PROJELERİNİZ</label>
+            <div id="project-list"></div>
+            <button class="btn" style="background:#444" onclick="createNew()">+ Yeni Proje Ekle</button>
+        </div>
+
+        <div id="editor-section" style="display:none">
+            <div class="control-group">
+                <label>PROJE ADI</label>
+                <input type="text" id="p-name">
+                <label>MODEL DOSYASI (Aynı klasörde)</label>
+                <input type="text" id="p-model" placeholder="model.glb">
+                <label>KONUM (Haritaya Tıkla)</label>
+                <div id="map"></div>
+                <div id="p-coords" style="font-size: 10px; color: #28a745;">Haritadan seçiniz</div>
+            </div>
+
+            <div class="control-group">
+                <label>AR AYARLARI (Canlı Güncellenir)</label>
+                <label>Ölçek: <span id="v-scale">10</span></label>
+                <input type="range" id="p-scale" min="1" max="100" value="10">
+                <label>Dönüş: <span id="v-rot">0</span>°</label>
+                <input type="range" id="p-rot" min="0" max="360" value="0">
+                <label>Yükseklik: <span id="v-alt">0</span></label>
+                <input type="range" id="p-alt" min="-10" max="20" value="0" step="0.1">
+            </div>
+
+            <button class="btn btn-save" onclick="save()">DEĞİŞİKLİKLERİ KAYDET</button>
+            
+            <div style="background:#000; padding:10px; border-radius:8px; margin-top:10px">
+                <label>KULLANICI LİNKİ:</label>
+                <div id="p-link" style="font-size:10px; color:var(--p); word-break:break-all; margin:10px 0"></div>
+                <button class="btn" style="padding:5px; font-size:11px" onclick="copyLink()">Linki Kopyala</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AR Sahnesi (Arka Planda Canlı Önizleme) -->
+    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
+        <a-entity light="type: hemisphere; intensity: 2"></a-entity>
+        <a-entity id="preview-model" gltf-model="" gps-entity-place="latitude: 0; longitude: 0;"></a-entity>
+        <a-camera gps-camera rotation-reader></a-camera>
+    </a-scene>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('ar_db')) || {};
+        let activeId = null;
+
+        const map = L.map('map').setView([41.017039, 28.858800], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        let marker = L.marker([41.017039, 28.858800]).addTo(map);
+
+        map.on('click', (e) => {
+            if(!activeId) return;
+            db[activeId].lat = e.latlng.lat;
+            db[activeId].lon = e.latlng.lng;
+            marker.setLatLng(e.latlng);
+            updatePreview();
+        });
+
+        function renderList() {
+            const container = document.getElementById('project-list');
+            container.innerHTML = '';
+            for(let id in db) {
+                const item = document.createElement('div');
+                item.className = `project-card ${activeId === id ? 'active' : ''}`;
+                item.innerText = db[id].name;
+                item.onclick = () => load(id);
+                container.appendChild(item);
+            }
+        }
+
+        function createNew() {
+            const n = prompt("Proje Adı:");
+            if(!n) return;
+            const id = 'proj_' + Date.now();
+            db[id] = { id: id, name: n, model: 'model.glb', lat: 41.017039, lon: 28.858800, scale: 10, rot: 0, alt: 0 };
+            saveDB();
+            load(id);
+        }
+
+        function load(id) {
+            activeId = id;
+            const p = db[id];
+            document.getElementById('editor-section').style.display = 'block';
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-model').value = p.model;
+            document.getElementById('p-scale').value = p.scale;
+            document.getElementById('v-scale').innerText = p.scale;
+            document.getElementById('p-rot').value = p.rot;
+            document.getElementById('v-rot').innerText = p.rot;
+            document.getElementById('p-alt').value = p.alt;
+            document.getElementById('v-alt').innerText = p.alt;
+            
+            marker.setLatLng([p.lat, p.lon]);
+            map.panTo([p.lat, p.lon]);
+            
+            document.getElementById('p-link').innerText = window.location.href.replace('admin.html', 'index.html') + '?id=' + id;
+            renderList();
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const p = db[activeId];
+            const m = document.getElementById('preview-model');
+            m.setAttribute('gltf-model', `url(${p.model})`);
+            m.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lon};`);
+            m.setAttribute('scale', `${p.scale} ${p.scale} ${p.scale}`);
+            m.setAttribute('rotation', `0 ${p.rot} 0`);
+            m.setAttribute('position', `0 ${p.alt} 0`);
+        }
+
+        ['p-scale', 'p-rot', 'p-alt'].forEach(key => {
+            document.getElementById(key).oninput = (e) => {
+                const val = parseFloat(e.target.value);
+                const field = key.replace('p-', '');
+                db[activeId][field] = val;
+                document.getElementById('v-' + field).innerText = val;
+                updatePreview();
+            };
+        });
+
+        function save() {
+            db[activeId].name = document.getElementById('p-name').value;
+            db[activeId].model = document.getElementById('p-model').value;
+            saveDB();
+            alert("Kaydedildi! Kullanıcılar güncel halini görecek.");
+            renderList();
+        }
+
+        function saveDB() { localStorage.setItem('ar_db', JSON.stringify(db)); }
+        
+        function copyLink() {
+            navigator.clipboard.writeText(document.getElementById('p-link').innerText);
+            alert("Link Kopyalandı!");
+        }
+
+        renderList();
+    </script>
+</body>
+</html>
