@@ -38,7 +38,6 @@
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
     import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
-    // ---- Temel değişkenler
     let renderer, scene, camera;
     let xrSession = null;
     let referenceSpace = null;
@@ -53,7 +52,6 @@
     const startBtn = document.getElementById('startAR');
     const placeBtn = document.getElementById('place');
 
-    // ---- WebXR destek kontrolü
     async function checkSupport() {
       if (!navigator.xr) {
         statusEl.textContent = 'Bu tarayıcıda WebXR desteklenmiyor. Android Chrome veya iOS Safari kullanın ve HTTPS üzerinden açın.';
@@ -62,7 +60,7 @@
       }
       const supported = await navigator.xr.isSessionSupported('immersive-ar');
       if (!supported) {
-        statusEl.textContent = 'Cihaz immersive-ar modunu desteklemiyor veya kapalı. Tarayıcıyı güncelleyin ve kamera izinlerini verin.';
+        statusEl.textContent = 'Cihaz immersive-ar modunu desteklemiyor. Tarayıcıyı güncelleyin ve kamera izinlerini verin.';
         startBtn.disabled = true;
         return false;
       }
@@ -70,7 +68,6 @@
       return true;
     }
 
-    // ---- Renderer ve sahne kurulumu
     function setupThree() {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -87,13 +84,11 @@
       });
     }
 
-    // ---- Model yükleme
     function loadModel(url = 'model.glb') {
       const loader = new GLTFLoader();
       loader.load(url, (gltf) => {
         model = gltf.scene;
-        model.visible = false; // Başlangıçta görünmesin
-        // Mobil performans için basit ölçek
+        model.visible = false;
         model.scale.set(1, 1, 1);
         scene.add(model);
         statusEl.textContent = 'Model yüklendi. Zemin algılanınca "Zemine Sabitle" ile yerleştirin.';
@@ -102,31 +97,23 @@
       });
     }
 
-    // ---- AR oturumu başlatma
     async function startAR() {
       try {
         xrSession = await navigator.xr.requestSession('immersive-ar', {
-          requiredFeatures: ['hit-test'],
-          optionalFeatures: ['dom-overlay'],
-          domOverlay: { root: document.body }
+          requiredFeatures: ['hit-test']
         });
 
         renderer.xr.setSession(xrSession);
 
-        // Referans uzayları
         referenceSpace = await xrSession.requestReferenceSpace('local');
         viewerSpace = await xrSession.requestReferenceSpace('viewer');
 
-        // Hit-test kaynağı
         hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
 
-        // XR input: iOS/Android dokunma için "select" olayı
         xrSession.addEventListener('select', onSelect);
 
-        // Render döngüsü
         renderer.setAnimationLoop(onXRFrame);
 
-        // UI güncelle
         startBtn.disabled = true;
         placeBtn.disabled = false;
         statusEl.textContent = 'AR başlatıldı. Kamerayı zemine doğru tutun—algılanınca sabitleyin.';
@@ -135,21 +122,18 @@
       }
     }
 
-    // ---- Kullanıcı dokununca (XR select) sabitleme
     function onSelect() {
       if (model && lastHitPose && !modelPlaced) {
         placeModelAtPose(lastHitPose);
       }
     }
 
-    // ---- UI butonu ile sabitleme
     placeBtn.addEventListener('click', () => {
       if (model && lastHitPose && !modelPlaced) {
         placeModelAtPose(lastHitPose);
       }
     });
 
-    // ---- Modeli hit-test pozuna yerleştir ve kilitle
     function placeModelAtPose(pose) {
       const p = pose.transform.position;
       const q = pose.transform.orientation;
@@ -158,24 +142,19 @@
       model.quaternion.set(q.x, q.y, q.z, q.w);
       model.visible = true;
 
-      // Kilitle: tekrar oynatmayı engelle
       modelPlaced = true;
       placeBtn.disabled = true;
       statusEl.textContent = 'Model zemine sabitlendi. Artık oynatılamaz.';
     }
 
-    // ---- XR frame döngüsü: hit-test çalıştır
     function onXRFrame(time, frame) {
-      const session = frame.session;
       const pose = frame.getViewerPose(referenceSpace);
       if (pose) {
-        // Hit-test sonuçları
         const results = frame.getHitTestResults(hitTestSource);
         if (results.length > 0) {
           const hit = results[0];
           lastHitPose = hit.getPose(referenceSpace);
 
-          // Model yerleştirilmemişse, kullanıcıya bilgi ver
           if (!modelPlaced) {
             statusEl.textContent = 'Zemin algılandı. Dokunun veya "Zemine Sabitle" butonuna basın.';
           }
@@ -185,11 +164,9 @@
           }
         }
       }
-
       renderer.render(scene, camera);
     }
 
-    // ---- Başlat
     (async () => {
       setupThree();
       const ok = await checkSupport();
@@ -198,7 +175,6 @@
       }
     })();
 
-    // ---- AR başlat butonu (kullanıcı jesti gerekir)
     startBtn.addEventListener('click', () => {
       startAR();
     });
