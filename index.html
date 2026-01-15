@@ -2,13 +2,22 @@
 <html lang="tr">
 
 <head>
-    <title>AR İnşaat İzleyici</title>
+    <title>AR Deneyimi</title>
     <meta charset="utf-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+
     <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+        }
+
         body,
         html {
             margin: 0;
@@ -16,111 +25,508 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #000;
-            font-family: sans-serif;
-            color: #fff;
-        }
-
-        #welcome {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, #222, #000);
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .btn-start {
-            background: #007bff;
+            background: transparent !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: white;
-            border: none;
-            padding: 20px 60px;
-            border-radius: 100px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0, 123, 255, 0.4);
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        #dist-ui {
-            position: fixed;
-            top: 20px;
-            width: 100%;
-            display: none;
-            justify-content: center;
-            z-index: 1000;
-            pointer-events: none;
-        }
-
-        .pill {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(15px);
-            padding: 10px 25px;
-            border-radius: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 14px;
-        }
-
-        video {
+        video#arjs-video {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
             object-fit: cover !important;
-            z-index: -2 !important;
+            z-index: -5 !important;
+        }
+
+        .a-canvas {
+            z-index: -1 !important;
+            background: transparent !important;
+            pointer-events: none !important;
+        }
+
+        #splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .project-icon {
+            font-size: 70px;
+            margin-bottom: 15px;
+        }
+
+        .project-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .project-desc {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 35px;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+
+        .start-btn {
+            background: white;
+            color: #0d0d1a;
+            padding: 18px 55px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-msg {
+            color: #ff6b6b;
+            font-size: 14px;
+            background: rgba(255, 107, 107, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 300px;
+        }
+
+        #top-bar {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            z-index: 4000;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-pill {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 16px;
+            border-radius: 50px;
+            font-size: 11px;
+            backdrop-filter: blur(10px);
+        }
+
+        .locked-badge {
+            background: rgba(40, 167, 69, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 8px 14px;
+            border-radius: 50px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        #bottom-card {
+            position: fixed;
+            bottom: 20px;
+            left: 15px;
+            right: 15px;
+            z-index: 4000;
+            display: none;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 18px;
+            border-radius: 18px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .card-badge {
+            font-size: 9px;
+            color: #888;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .card-desc {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .distance-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .distance-label {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .distance-value {
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        #direction-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .direction-arrow {
+            font-size: 55px;
+            animation: bounce 1s infinite;
+        }
+
+        .direction-text {
+            font-size: 13px;
+            color: #fff;
+            margin-top: 8px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 5000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 45px;
+            height: 45px;
+            border: 3px solid #222;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            margin-top: 18px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        #info-popup {
+            position: fixed;
+            bottom: 120px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 12px;
+            z-index: 4500;
+            display: none;
+            text-align: center;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #info-popup .close-btn {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 18px;
+            cursor: pointer;
         }
     </style>
 </head>
 
 <body>
-    <div id="welcome">
-        <div style="font-size:50px; margin-bottom:20px">🏗️</div>
-        <h1 id="p-name">Proje Yükleniyor...</h1>
-        <button id="start-btn" class="btn-start" style="display:none" onclick="start()">AR DENEYİMİNİ BAŞLAT</button>
-        <p id="status" style="color:#666; margin-top:20px">Lütfen bekleyin...</p>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Model Yükleniyor...</div>
     </div>
-    <div id="dist-ui">
-        <div class="pill" id="dist-txt">Mesafe hesaplanıyor...</div>
+
+    <div id="splash">
+        <div class="project-icon">🏗️</div>
+        <div class="project-name" id="proj-name">Yükleniyor...</div>
+        <div class="project-desc" id="proj-desc"></div>
+        <button class="start-btn" id="start-btn" style="display: none;" onclick="startAR()">AR DENEYİMİNİ
+            BAŞLAT</button>
+        <div class="error-msg" id="error-msg" style="display: none;"></div>
     </div>
-    <a-scene vr-mode-ui="enabled: false" embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-        <a-entity light="type: hemisphere; intensity: 2"></a-entity>
-        <a-entity id="model" gltf-model=""></a-entity>
+
+    <div id="top-bar">
+        <div class="info-pill">🛰️ <span id="gps-status">GPS Bekleniyor</span></div>
+        <div class="locked-badge">🔒 SABİT KONUM</div>
+    </div>
+
+    <div id="direction-indicator">
+        <div class="direction-arrow" id="dir-arrow">⬆️</div>
+        <div class="direction-text" id="dir-text">Modele doğru dönün</div>
+    </div>
+
+    <div id="bottom-card">
+        <div class="card-header">
+            <div class="card-title" id="card-title">Model</div>
+            <div class="card-badge">📍 Admin tarafından konumlandı</div>
+        </div>
+        <div class="card-desc" id="card-desc"></div>
+        <div class="distance-row">
+            <span class="distance-label">Mesafe</span>
+            <span class="distance-value" id="dist-val">--<span
+                    style="font-size: 14px; font-weight: 400;">m</span></span>
+        </div>
+    </div>
+
+    <div id="info-popup">
+        <button class="close-btn" onclick="closeInfoPopup()">✕</button>
+        <div id="info-text"></div>
+    </div>
+
+    <a-scene vr-mode-ui="enabled: false" embedded arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;"
+        renderer="antialias: true; precision: highp; alpha: true; colorManagement: true;">
+
+        <a-entity id="light-amb" light="type: hemisphere; intensity: 2; color: #ffffff"></a-entity>
+        <a-entity id="light-dir" light="type: directional; intensity: 1.5; castShadow: false"
+            position="1 3 1"></a-entity>
+        <a-entity id="ar-model" gltf-model="" shadow="cast: false; receive: false"></a-entity>
         <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
+
     <script>
-        const db = JSON.parse(localStorage.getItem('ar_db')) || {};
-        const pid = new URLSearchParams(window.location.search).get('id');
-        const config = db[pid];
-        if (config) { document.getElementById('p-name').innerText = config.name; document.getElementById('start-btn').style.display = 'block'; document.getElementById('status').innerText = "Kamera ve GPS izni istenecek."; }
-        else { document.getElementById('status').innerText = "Hata: Proje bulunamadı."; }
-        function start() {
+        // Sürüklemeyi engelle
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+        document.addEventListener('touchstart', (e) => { if (!e.target.closest('button')) e.preventDefault(); }, { passive: false });
+
+        // Veri yükleme
+        const urlParams = new URLSearchParams(window.location.search);
+        let project = null;
+        let myPosition = { lat: 0, lon: 0 };
+
+        // URL'den veri çözümle
+        const encodedData = urlParams.get('data');
+        if (encodedData) {
+            try {
+                project = JSON.parse(decodeURIComponent(atob(encodedData)));
+                document.getElementById('proj-name').innerText = project.name || 'AR Deneyimi';
+                document.getElementById('proj-desc').innerText = project.desc || 'Bu model admin tarafından belirli bir GPS konumuna yerleştirilmiştir.';
+                document.getElementById('start-btn').style.display = 'block';
+                document.getElementById('card-title').innerText = project.name || 'Model';
+                document.getElementById('card-desc').innerText = project.desc || '';
+            } catch (e) {
+                showError('Link verileri bozuk. Lütfen yeni bir link isteyin.');
+            }
+        } else {
+            // Eski sistem (localStorage)
+            const db = JSON.parse(localStorage.getItem('ar_studio_db')) || {};
+            const projectId = urlParams.get('id');
+            if (projectId && db[projectId]) {
+                project = db[projectId];
+                document.getElementById('proj-name').innerText = project.name;
+                document.getElementById('proj-desc').innerText = project.desc || 'Model GPS konumuna sabitlenmiştir.';
+                document.getElementById('start-btn').style.display = 'block';
+                document.getElementById('card-title').innerText = project.name;
+            } else {
+                showError(projectId ? 'Proje bulunamadı.' : 'Geçersiz link.');
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('proj-name').innerText = 'Hata';
+            document.getElementById('proj-desc').style.display = 'none';
+            document.getElementById('error-msg').innerText = msg;
+            document.getElementById('error-msg').style.display = 'block';
+        }
+
+        function startAR() {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(() => { run(); }).catch(run);
-            } else run();
+                DeviceOrientationEvent.requestPermission().then(() => initAR()).catch(() => initAR());
+            } else initAR();
         }
-        function run() {
-            document.getElementById('welcome').style.display = 'none'; document.getElementById('dist-ui').style.display = 'flex';
-            const m = document.getElementById('model');
-            m.setAttribute('gltf-model', 'url(' + config.model + ')');
-            m.setAttribute('gps-entity-place', 'latitude:' + config.lat + '; longitude:' + config.lon + ';');
-            m.setAttribute('scale', config.scale + ' ' + config.scale + ' ' + config.scale);
-            m.setAttribute('rotation', '0 ' + config.rot + ' 0');
-            m.setAttribute('position', '0 ' + config.alt + ' 0');
+
+        function initAR() {
+            document.getElementById('splash').style.display = 'none';
+            document.getElementById('loading-overlay').style.display = 'flex';
+            document.getElementById('top-bar').style.display = 'flex';
+            document.getElementById('bottom-card').style.display = 'block';
+
+            const scene = document.querySelector('a-scene');
+            if (scene.renderer) scene.renderer.setPixelRatio(window.devicePixelRatio);
+
+            loadModel();
         }
-        window.addEventListener('gps-camera-update-position', () => {
-            const d = document.getElementById('model').getAttribute('distance');
-            if (d !== null) document.getElementById('dist-txt').innerText = `İnşaat: ${Math.round(d)} Metre Uzakta`;
+
+        function loadModel() {
+            if (!project) return;
+
+            const model = document.getElementById('ar-model');
+            const ambLight = document.getElementById('light-amb');
+            const dirLight = document.getElementById('light-dir');
+
+            model.addEventListener('model-loaded', () => {
+                document.getElementById('loading-overlay').style.display = 'none';
+
+                // Info popup
+                if (project.infoText) {
+                    document.getElementById('info-text').innerText = project.infoText;
+                    document.getElementById('info-popup').style.display = 'block';
+                }
+            });
+
+            model.addEventListener('model-error', () => {
+                document.getElementById('loading-overlay').querySelector('.loading-text').innerText = 'Model yüklenemedi.';
+            });
+
+            // Model ayarları
+            model.setAttribute('gltf-model', project.model);
+            model.setAttribute('gps-entity-place', `latitude: ${project.lat}; longitude: ${project.lon};`);
+
+            const sx = project.uniformScale !== false ? project.scale : (project.scaleX || project.scale);
+            const sy = project.uniformScale !== false ? project.scale : (project.scaleY || project.scale);
+            const sz = project.uniformScale !== false ? project.scale : (project.scaleZ || project.scale);
+            model.setAttribute('scale', `${sx} ${sy} ${sz}`);
+
+            model.setAttribute('rotation', `${project.rotX || 0} ${project.rotY || 0} ${project.rotZ || 0}`);
+            model.setAttribute('position', `${project.offX || 0} ${project.alt || 0} ${project.offZ || 0}`);
+
+            // Işık ayarları
+            const lightColor = project.lightColor || '#ffffff';
+            ambLight.setAttribute('light', `type: hemisphere; intensity: ${project.ambLight || 2}; color: ${lightColor}`);
+            dirLight.setAttribute('light', `type: directional; intensity: ${project.dirLight || 1.5}; castShadow: ${project.shadow || false}`);
+
+            // Otomatik döndürme
+            if (project.autoRot && project.autoRot > 0) {
+                setInterval(() => {
+                    const rot = model.getAttribute('rotation');
+                    model.setAttribute('rotation', { x: rot.x, y: rot.y + project.autoRot, z: rot.z });
+                }, 50);
+            }
+
+            // Tıklama URL'i
+            if (project.clickUrl) {
+                model.setAttribute('class', 'clickable');
+                model.addEventListener('click', () => window.open(project.clickUrl, '_blank'));
+            }
+        }
+
+        function closeInfoPopup() {
+            document.getElementById('info-popup').style.display = 'none';
+        }
+
+        // GPS takibi
+        window.addEventListener('gps-camera-update-position', (e) => {
+            myPosition.lat = e.detail.position.latitude;
+            myPosition.lon = e.detail.position.longitude;
+            document.getElementById('gps-status').innerText = `${myPosition.lat.toFixed(5)}, ${myPosition.lon.toFixed(5)}`;
+
+            if (project) {
+                const modelEl = document.getElementById('ar-model');
+                const dist = modelEl.getAttribute('distance');
+                if (dist !== null) {
+                    const d = Math.round(dist);
+                    document.getElementById('dist-val').innerHTML = `${d}<span style="font-size: 14px; font-weight: 400;">m</span>`;
+
+                    const distEl = document.getElementById('dist-val');
+                    distEl.style.color = d < 10 ? 'var(--success)' : d < 50 ? 'var(--warning)' : 'var(--danger)';
+
+                    // Maksimum görünürlük mesafesi
+                    if (project.maxDist && d > project.maxDist) {
+                        modelEl.setAttribute('visible', 'false');
+                    } else {
+                        modelEl.setAttribute('visible', 'true');
+                        // Fade efekti
+                        if (project.fadeDist && d > project.maxDist - project.fadeDist) {
+                            const fadeRatio = (project.maxDist - d) / project.fadeDist;
+                            modelEl.setAttribute('material', `opacity: ${Math.max(0, fadeRatio)}`);
+                        }
+                    }
+
+                    updateDirectionIndicator();
+                }
+            }
         });
-        setInterval(() => { const v = document.querySelector('video'); if (v) { v.style.zIndex = "-5"; v.style.position = "fixed"; v.style.objectFit = "cover"; } }, 1000);
+
+        function updateDirectionIndicator() {
+            if (!project || !myPosition.lat) return;
+            const cam = document.querySelector('[gps-camera]');
+            if (!cam) return;
+
+            const camRot = cam.getAttribute('rotation');
+            const dLat = project.lat - myPosition.lat, dLon = project.lon - myPosition.lon;
+            const targetAngle = Math.atan2(dLon, dLat) * (180 / Math.PI);
+            let diff = targetAngle - camRot.y;
+            while (diff > 180) diff -= 360;
+            while (diff < -180) diff += 360;
+
+            const indicator = document.getElementById('direction-indicator');
+            if (Math.abs(diff) > 40) {
+                indicator.style.display = 'flex';
+                document.getElementById('dir-arrow').innerText = diff > 0 ? '➡️' : '⬅️';
+                document.getElementById('dir-text').innerText = diff > 0 ? 'Sağa dönün' : 'Sola dönün';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+
+        // Video görünürlük
+        setInterval(() => {
+            const v = document.querySelector('video');
+            if (v) { v.style.zIndex = "-10"; v.style.display = "block"; v.setAttribute('playsinline', ''); }
+        }, 1000);
     </script>
 </body>
 
