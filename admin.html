@@ -2,7 +2,7 @@
 <html lang="tr">
 
 <head>
-    <title>AR Admin Studio - Drag & Navigate</title>
+    <title>AR Admin Studio - Bring to Front</title>
     <meta charset="utf-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -15,7 +15,7 @@
     <style>
         :root {
             --p: #007bff;
-            --glass: rgba(10, 10, 10, 0.85);
+            --glass: rgba(10, 10, 10, 0.9);
             --success: #28a745;
         }
 
@@ -26,10 +26,11 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: transparent !important;
+            background: #000 !important;
             font-family: -apple-system, sans-serif;
         }
 
+        /* Kamera Katmanları */
         video#arjs-video {
             position: fixed !important;
             top: 0 !important;
@@ -46,7 +47,7 @@
             background: transparent !important;
         }
 
-        /* --- UI MODÜLLERİ --- */
+        /* --- ANA PANEL --- */
         #admin-panel {
             position: fixed;
             left: 0;
@@ -85,23 +86,30 @@
             border-radius: 15px;
             cursor: pointer;
             font-size: 24px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
-        #recenter-btn {
+        /* --- ÖNÜME GETİR BUTONU (BÜYÜK) --- */
+        #place-overlay {
             position: fixed;
-            left: 15px;
-            top: 75px;
-            z-index: 3001;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        #bring-btn {
             background: var(--success);
             color: white;
             border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 15px;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
             cursor: pointer;
-            font-size: 24px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            box-shadow: 0 5px 25px rgba(40, 167, 69, 0.5);
             display: none;
         }
 
@@ -116,30 +124,33 @@
             font-size: 11px;
             color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            pointer-events: none;
         }
 
-        /* Yön Ok Göstergesi */
-        #direction-indicator {
+        /* Merkez Nişangah */
+        #reticle {
             position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 1000;
-            width: 60px;
-            height: 60px;
-            background: rgba(0, 0, 0, 0.6);
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            pointer-events: none;
             display: none;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid var(--p);
         }
 
-        #arrow {
-            width: 30px;
-            height: 30px;
-            fill: var(--p);
-            transition: transform 0.1s;
+        #reticle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: red;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
         }
 
         .card {
@@ -204,47 +215,32 @@
             text-align: center;
             color: white;
         }
-
-        /* Sürükleme İpucu */
-        #drag-tip {
-            position: fixed;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            z-index: 1000;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 11px;
-            pointer-events: none;
-            display: none;
-        }
     </style>
 </head>
 
 <body>
 
     <div id="splash">
-        <h2 style="margin-bottom:10px;">AR STUDIO ADMIN</h2>
-        <button class="btn" style="width:250px; padding:20px" onclick="startSystem()">SİSTEMİ BAŞLAT</button>
+        <h2 style="margin-bottom:15px;">AR STUDIO ADMIN</h2>
+        <button class="btn" style="width:250px; padding:20px" onclick="startSystem()">SİSTEMİ & KAMERAYI BAŞLAT</button>
+        <p style="color:#888; margin-top:15px; font-size:12px">Modellerin gözükmesi için GPS gereklidir.</p>
     </div>
 
     <button id="menu-btn" onclick="toggleMenu()">☰</button>
-    <button id="recenter-btn" onclick="recenterObject()" title="Objeyi Önüme Getir">📍</button>
 
     <div id="status-bar">
-        📏 <span id="dist">0</span>m | 📍 <span id="gps">Bekleniyor...</span>
+        📏 <span id="dist">0</span>m | 📍 <span id="gps">GPS Aranıyor...</span>
     </div>
 
-    <div id="direction-indicator">
-        <svg id="arrow" viewBox="0 0 24 24">
-            <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
-        </svg>
-    </div>
+    <div id="reticle"></div>
 
-    <div id="drag-tip">Parmakla sürükleyerek konumu ayarla</div>
+    <div id="place-overlay">
+        <button id="bring-btn" onclick="bringToMe()">🎯 OBJE ÖNÜME GELSİN</button>
+    </div>
 
     <div id="admin-panel">
         <h3 style="margin:0 0 10px 0">AR Studio</h3>
-        <label>PROJE LİSTESİ</label>
+        <label>PROJE SEÇ</label>
         <select id="proj-select" onchange="loadProj(this.value)">
             <option value="">-- Seçiniz --</option>
         </select>
@@ -263,9 +259,9 @@
                 <label>Dönüş: <span id="v-r">0</span>°</label>
                 <input type="range" id="p-rot" min="0" max="360" value="0">
                 <label>Yükseklik: <span id="v-a">0</span></label>
-                <input type="range" id="p-alt" min="-10" max="20" value="0" step="0.1">
+                <input type="range" id="p-alt" min="-10" max="25" value="0" step="0.1">
             </div>
-            <button class="btn" style="background:#28a745; margin-top:10px;" onclick="save()">BİLGİLERİ KAYDET</button>
+            <button class="btn" style="background:#28a745; margin-top:10px;" onclick="save()">AYARLARI KAYDET</button>
             <button class="btn" style="background:#dc3545; font-size:11px; margin-top:5px"
                 onclick="delProj()">SİL</button>
             <div id="p-link" style="font-size:8px; color:#007bff; word-break:break-all; margin:15px 0"></div>
@@ -277,7 +273,9 @@
 
         <a-entity light="type: hemisphere; intensity: 2"></a-entity>
         <a-entity light="type: directional; intensity: 1.5;" position="1 2 1"></a-entity>
+
         <a-entity id="ar-obj" gltf-model=""></a-entity>
+
         <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
@@ -291,7 +289,7 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         let marker = L.marker([41.017, 28.858]).addTo(map);
 
-        // --- SÜRÜKLEME MANTIĞI ---
+        // --- SÜRÜKLEME ---
         window.addEventListener('touchstart', (e) => {
             if (!activeId || e.target.closest('#admin-panel') || e.target.closest('button')) return;
             isDragging = true;
@@ -300,17 +298,10 @@
 
         window.addEventListener('touchmove', (e) => {
             if (!isDragging || !activeId) return;
-
             const touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            const dx = touch.x - lastTouch.x;
-            const dy = touch.y - lastTouch.y;
-
-            // Hassas sürükleme katsayısı
-            const sensitivity = 0.0000002;
-
-            db[activeId].lat -= dy * sensitivity;
-            db[activeId].lon += dx * sensitivity;
-
+            const sensitivity = 0.0000004;
+            db[activeId].lat -= (touch.y - lastTouch.y) * sensitivity;
+            db[activeId].lon += (touch.x - lastTouch.x) * sensitivity;
             marker.setLatLng([db[activeId].lat, db[activeId].lon]);
             sync();
             lastTouch = touch;
@@ -325,22 +316,35 @@
         }
         function finish() { document.getElementById('splash').style.display = 'none'; }
 
-        function toggleMenu() { const p = document.getElementById('admin-panel'); p.classList.toggle('open'); document.getElementById('menu-btn').innerText = p.classList.contains('open') ? '✕' : '☰'; if (p.classList.contains('open')) setTimeout(() => map.invalidateSize(), 300); }
-        function refreshList() { const c = document.getElementById('proj-select'); c.innerHTML = '<option value="">-- Seçiniz --</option>'; for (let id in db) { const o = document.createElement('option'); o.value = id; o.innerText = db[id].name; o.selected = (id === activeId); c.appendChild(o); } }
+        function toggleMenu() {
+            const p = document.getElementById('admin-panel');
+            p.classList.toggle('open');
+            document.getElementById('menu-btn').innerText = p.classList.contains('open') ? '✕' : '☰';
+            if (p.classList.contains('open')) setTimeout(() => map.invalidateSize(), 300);
+        }
+
+        function refreshList() {
+            const c = document.getElementById('proj-select');
+            c.innerHTML = '<option value="">-- Seçiniz --</option>';
+            for (let id in db) {
+                const o = document.createElement('option');
+                o.value = id; o.innerText = db[id].name;
+                o.selected = (id === activeId);
+                c.appendChild(o);
+            }
+        }
 
         function loadProj(id) {
             if (!id) {
                 document.getElementById('editor').style.display = 'none';
-                document.getElementById('recenter-btn').style.display = 'none';
-                document.getElementById('direction-indicator').style.display = 'none';
-                document.getElementById('drag-tip').style.display = 'none';
+                document.getElementById('bring-btn').style.display = 'none';
+                document.getElementById('reticle').style.display = 'none';
                 activeId = null; return;
             }
             activeId = id;
             document.getElementById('editor').style.display = 'block';
-            document.getElementById('recenter-btn').style.display = 'block';
-            document.getElementById('direction-indicator').style.display = 'flex';
-            document.getElementById('drag-tip').style.display = 'block';
+            document.getElementById('bring-btn').style.display = 'block';
+            document.getElementById('reticle').style.display = 'block';
 
             const p = db[id];
             document.getElementById('p-name').value = p.name;
@@ -353,31 +357,50 @@
             sync();
         }
 
-        // Objeyi tam önümüze getir (Hizalama Kolaylığı)
-        function recenterObject() {
-            if (!activeId || myPos.lat === 0) return;
+        // --- OBJE ÖNÜME GELSİN ---
+        function bringToMe() {
+            if (!activeId) return;
+            if (myPos.lat === 0) {
+                alert("GPS konumu henüz alınamadı. Lütfen bekleyin.");
+                return;
+            }
+
             const cam = document.querySelector('[gps-camera]');
             const rot = cam.getAttribute('rotation');
             const dist = 6; // 6 metre ileriye koy
             const angle = (rot.y) * Math.PI / 180;
+
             const dN = Math.cos(angle) * dist;
             const dE = -Math.sin(angle) * dist;
             const R = 6371000;
+
             db[activeId].lat = myPos.lat + (dN / R) * (180 / Math.PI);
             db[activeId].lon = myPos.lon + (dE / (R * Math.cos(myPos.lat * Math.PI / 180))) * (180 / Math.PI);
+
             marker.setLatLng([db[activeId].lat, db[activeId].lon]);
             map.panTo([db[activeId].lat, db[activeId].lon]);
+
             sync();
+
+            const btn = document.getElementById('bring-btn');
+            btn.innerText = "✅ OBJE GELDİ";
+            setTimeout(() => btn.innerText = "🎯 OBJE ÖNÜME GELSİN", 2000);
         }
 
         function sync() {
+            if (!activeId) return;
             const p = db[activeId];
             const el = document.getElementById('ar-obj');
-            el.setAttribute('gltf-model', 'url(' + p.model + ')');
-            el.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lon};`);
-            el.setAttribute('scale', `${p.scale} ${p.scale} ${p.scale}`);
-            el.setAttribute('rotation', `0 ${p.rot} 0`);
-            el.setAttribute('position', `0 ${p.alt} 0`);
+
+            // Modeli zorla güncelle
+            el.setAttribute('gltf-model', '');
+            setTimeout(() => {
+                el.setAttribute('gltf-model', 'url(' + p.model + ')');
+                el.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lon};`);
+                el.setAttribute('scale', `${p.scale} ${p.scale} ${p.scale}`);
+                el.setAttribute('rotation', `0 ${p.rot} 0`);
+                el.setAttribute('position', `0 ${p.alt} 0`);
+            }, 10);
         }
 
         window.addEventListener('gps-camera-update-position', (e) => {
@@ -386,26 +409,8 @@
             if (activeId) {
                 const d = document.getElementById('ar-obj').getAttribute('distance');
                 if (d !== null) document.getElementById('dist').innerText = Math.round(d);
-                updateIndicator();
             }
         });
-
-        // Objeye Dönme Oku (Navigasyon)
-        function updateIndicator() {
-            if (!activeId || myPos.lat === 0) return;
-            const cam = document.querySelector('[gps-camera]');
-            const camRot = cam.getAttribute('rotation').y;
-            const target = db[activeId];
-
-            // Hedefe olan açıyı hesapla
-            const dy = target.lat - myPos.lat;
-            const dx = (target.lon - myPos.lon) * Math.cos(myPos.lat * Math.PI / 180);
-            const angleToTarget = Math.atan2(dx, dy) * (180 / Math.PI);
-
-            // Okun dönmesi gereken açı
-            const arrowRot = angleToTarget + camRot;
-            document.getElementById('arrow').style.transform = `rotate(${arrowRot}deg)`;
-        }
 
         ['p-scale', 'p-rot', 'p-alt'].forEach(id => {
             document.getElementById(id).oninput = (e) => {
@@ -416,16 +421,15 @@
             };
         });
 
-        function save() { localStorage.setItem('ar_db', JSON.stringify(db)); alert("KAYDEDİLDİ!"); }
-        function delProj() { if (confirm("Sil?")) { delete db[activeId]; save(); location.reload(); } }
-        function copyLink() { navigator.clipboard.writeText(document.getElementById('p-link').innerText); alert("Link Kopyalandı!"); }
+        function save() { localStorage.setItem('ar_db', JSON.stringify(db)); alert("AYARLAR KAYDEDİLDİ!"); }
+        function delProj() { if (confirm("Projeyi silmek istediğine emin misin?")) { delete db[activeId]; save(); location.reload(); } }
+        function copyLink() { navigator.clipboard.writeText(document.getElementById('p-link').innerText); alert("Kopyalandı!"); }
 
         refreshList();
         setInterval(() => {
             const v = document.getElementById('arjs-video');
-            if (v) { v.style.zIndex = "-2"; v.style.position = "fixed"; v.style.display = "block"; }
-            if (activeId) updateIndicator();
-        }, 800);
+            if (v) { v.style.zIndex = "-5"; v.style.position = "fixed"; v.style.display = "block"; }
+        }, 1000);
     </script>
 </body>
 
