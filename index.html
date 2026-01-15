@@ -1,264 +1,76 @@
 <!DOCTYPE html>
 <html lang="tr">
-
 <head>
-    <title>GPS Tabanlı İnşaat AR</title>
+    <title>GPS Sabitlenmiş İnşaat AR</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <link rel="icon" href="data:,">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, precision=highp">
+    <!-- A-Frame ve AR.js (Location Based) Kütüphaneleri -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
     <style>
-        body {
-            margin: 0;
-            background-color: #000;
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-            touch-action: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #overlay-ui {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-
-        #ui-container {
-            position: absolute;
-            z-index: 20;
-            text-align: center;
-            width: 100%;
-            pointer-events: none;
-        }
-
-        #ar-button-container {
-            pointer-events: auto;
-        }
-
-        button {
-            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-            color: white;
-            border: none;
-            padding: 18px 45px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            cursor: pointer;
-            display: none;
-            transition: transform 0.2s;
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        #status-msg {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 12px 24px;
-            border-radius: 25px;
-            margin-bottom: 25px;
-            display: inline-block;
-            font-size: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        #ar-overlay {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            pointer-events: none;
-        }
-
-        .instruction-badge {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        #dist-info {
+            background: rgba(0,0,0,0.7); color: white; padding: 15px 25px;
+            border-radius: 50px; border: 1px solid rgba(255,255,255,0.2);
+            font-size: 14px; backdrop-filter: blur(10px);
         }
     </style>
 </head>
-
 <body>
-    <div id="ui-container">
-        <div id="status-msg">Konumunuz kontrol ediliyor...</div>
-        <div id="ar-button-container">
-            <button id="start-ar-btn">AR'a Geçiş</button>
-        </div>
+
+    <div id="overlay-ui">
+        <div id="dist-info">Hedef konuma yaklaşın...</div>
     </div>
 
-    <div id="ar-overlay">
-        <div class="instruction-badge" id="ar-status">Zemini tarayın...</div>
-    </div>
+    <!-- AR Sahnesi -->
+    <a-scene
+        vr-mode-ui="enabled: false"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;">
+        
+        <!-- Yüksek Kaliteli Işıklandırma -->
+        <a-entity light="type: hemisphere; intensity: 3"></a-entity>
+        <a-entity light="type: directional; intensity: 1.5; position: 1 2 1"></a-entity>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        <!-- GPS'e SABİTLENMİŞ MODEL -->
+        <!-- model.glb dosyan bu koordinatlara çakılı kalacak -->
+        <a-entity 
+            id="construction-model"
+            gltf-model="url(model.glb)"
+            gps-entity-place="latitude: 41.017039; longitude: 28.858800;"
+            scale="5 5 5"
+            look-at="[gps-camera]">
+        </a-entity>
+
+        <!-- Kullanıcının Kamerası (GPS Takibi Yapan) -->
+        <a-camera gps-camera rotation-reader></a-camera>
+    </a-scene>
+
+    <script>
+        // Mesafe Takibi ve Kullanıcı Bilgilendirme
+        window.addEventListener('gps-camera-update-position', (e) => {
+            const model = document.querySelector('#construction-model');
+            // Mesafe bilgisini al
+            const dist = model.getAttribute('distanceMsg');
+            if (dist) {
+                document.getElementById('dist-info').innerText = `İnşaat Modeli: ${dist}`;
             }
-        }
-    </script>
+        });
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-        // --- AYARLAR (ODANIZIN KOORDİNATLARI EKLENDİ) ---
-        const TARGET_LAT = 41.017039; // N 41°1'1.34250"
-        const TARGET_LON = 28.858800; // E 28°51'31.67920"
-        const RADIUS_METERS = 50;     // Test kolaylığı için 50 metre yapıldı
-        const MODEL_URL = 'model.glb'; // Model dosyası
-        // ---------------------------------------------------------
-
-        let camera, scene, renderer, reticle, controller;
-        let hitTestSource = null;
-        let hitTestSourceRequested = false;
-        let model = null;
-        let modelPlaced = false;
-
-        init();
-
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-
-            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
-            scene.add(light);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true;
-            document.body.appendChild(renderer.domElement);
-
-            // GLB Yükle
-            const loader = new GLTFLoader();
-            loader.load(MODEL_URL, (gltf) => {
-                model = gltf.scene;
-            }, undefined, (e) => console.error("Model yüklenemedi", e));
-
-            // Reticle
-            reticle = new THREE.Mesh(
-                new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
-                new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-            );
-            reticle.matrixAutoUpdate = false;
-            reticle.visible = false;
-            scene.add(reticle);
-
-            // Controller
-            controller = renderer.xr.getController(0);
-            controller.addEventListener('select', onSelect);
-            scene.add(controller);
-
-            window.addEventListener('resize', onWindowResize);
-
-            checkLocation();
-        }
-
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        }
-
-        function checkLocation() {
-            if (!navigator.geolocation) {
-                document.getElementById('status-msg').innerText = "GPS desteklenmiyor.";
-                return;
-            }
-
-            navigator.geolocation.watchPosition((pos) => {
-                const dist = getDistance(pos.coords.latitude, pos.coords.longitude, TARGET_LAT, TARGET_LON);
-
-                if (dist <= RADIUS_METERS) {
-                    document.getElementById('status-msg').style.display = 'none';
-                    document.getElementById('start-ar-btn').style.display = 'block';
-                    setupARLaunch();
-                } else {
-                    document.getElementById('status-msg').innerText = `İnşaat alanından ${Math.round(dist)}m uzaktasınız.`;
-                    document.getElementById('start-ar-btn').style.display = 'none';
-                }
-            }, (err) => {
-                document.getElementById('status-msg').innerText = "Konum izni gerekiyor.";
-            }, { enableHighAccuracy: true });
-        }
-
-        function setupARLaunch() {
-            const btn = document.getElementById('start-ar-btn');
-            btn.onclick = () => {
-                navigator.xr.requestSession('immersive-ar', {
-                    requiredFeatures: ['hit-test'],
-                    optionalFeatures: ['dom-overlay'],
-                    domOverlay: { root: document.getElementById('ar-overlay') }
-                }).then((session) => {
-                    renderer.xr.setSession(session);
-                    document.getElementById('ui-container').style.display = 'none';
-                    document.getElementById('ar-overlay').style.display = 'flex';
-                    animate();
-                });
-            };
-        }
-
-        function onSelect() {
-            if (reticle.visible && model && !modelPlaced) {
-                const clone = model.clone();
-                clone.position.setFromMatrixPosition(reticle.matrix);
-                clone.quaternion.setFromRotationMatrix(reticle.matrix);
-                scene.add(clone);
-                modelPlaced = true;
-                reticle.visible = false;
-                document.getElementById('ar-status').innerText = 'İnşaat modeli yerleştirildi.';
-            }
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        function animate() {
-            renderer.setAnimationLoop(render);
-        }
-
-        function render(timestamp, frame) {
-            if (frame) {
-                const refSpace = renderer.xr.getReferenceSpace();
-                const session = renderer.xr.getSession();
-
-                if (!hitTestSourceRequested) {
-                    session.requestReferenceSpace('viewer').then((space) => {
-                        session.requestHitTestSource({ space: space }).then((src) => hitTestSource = src);
-                    });
-                    hitTestSourceRequested = true;
-                }
-
-                if (hitTestSource && !modelPlaced) {
-                    const results = frame.getHitTestResults(hitTestSource);
-                    if (results.length) {
-                        const hit = results[0];
-                        reticle.visible = true;
-                        reticle.matrix.fromArray(hit.getPose(refSpace).transform.matrix);
-                        document.getElementById('ar-status').innerText = 'Yerleştirmek için dokunun.';
-                    } else {
-                        reticle.visible = false;
-                        document.getElementById('ar-status').innerText = 'Zemini tarayın...';
-                    }
-                }
-            }
-            renderer.render(scene, camera);
-        }
+        // Sayfa yüklendiğinde yüksek kalite ayarlarını zorla
+        window.onload = () => {
+             const video = document.querySelector('video');
+             if(video) {
+                 video.style.width = "100%";
+                 video.style.height = "100%";
+                 video.style.objectFit = "cover"; // Video bindirmeyi tam ekran yapar
+             }
+        };
     </script>
 </body>
-
 </html>
