@@ -1,65 +1,148 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <title>AR İnşaat Deneyimi</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <!-- AR Kütüphaneleri -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+
     <style>
-        body, html { margin: 0; background: #000; color: #fff; font-family: sans-serif; height: 100vh; overflow: hidden; }
-        #welcome {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: radial-gradient(circle, #222, #000); z-index: 100; text-align: center;
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, sans-serif;
+            background: #000;
+            color: #fff;
         }
+
+        /* --- KARŞILAMA EKRANI --- */
+        #welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, #2a2a2a 0%, #000 100%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .icon-box {
+            width: 100px;
+            height: 100px;
+            background: #333;
+            border-radius: 25px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-start {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            border-radius: 100px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 5px 20px rgba(0, 123, 255, 0.4);
+        }
+
+        .btn-start:active {
+            transform: scale(0.95);
+        }
+
+        /* --- ÜST NAVİGASYON --- */
         #nav-header {
-            position: fixed; top: 20px; width: 100%; display: none;
-            justify-content: center; z-index: 50; pointer-events: none;
+            position: fixed;
+            top: 20px;
+            width: 100%;
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            pointer-events: none;
         }
-        .info-pill { background: rgba(0,0,0,0.8); padding: 12px 30px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); }
-        .btn { background: #007bff; color: #fff; border: none; padding: 20px 60px; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 18px; }
-        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; }
+
+        .dist-pill {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(15px);
+            padding: 12px 30px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+        }
+
+        video {
+            width: 100vw !important;
+            height: 100vh !important;
+            object-fit: cover !important;
+            position: absolute;
+        }
     </style>
 </head>
+
 <body>
 
-    <div id="welcome">
-        <div style="font-size: 60px; margin-bottom: 20px;">🏗️</div>
+    <div id="welcome-screen">
+        <div class="icon-box">🏗️</div>
         <h1 id="proj-name">Proje Yükleniyor...</h1>
-        <p id="proj-status">Hazırlanıyor, lütfen bekleyin...</p>
-        <button id="start-btn" class="btn" style="display:none" onclick="start()">DENEYİMİ BAŞLAT</button>
+        <p id="proj-desc" style="color: #888; margin-bottom: 40px;">Artırılmış Gerçeklik İnşaat Simülasyonu</p>
+        <button id="btn-start" class="btn-start" style="display:none" onclick="startAR()">AR DENEYİMİNİ BAŞLAT</button>
+        <div id="error-msg" style="color: #dc3545; display:none; margin-top: 20px;">Proje bulunamadı. Lütfen linki
+            kontrol edin.</div>
     </div>
 
     <div id="nav-header">
-        <div class="info-pill" id="dist-text">Konum hesaplanıyor...</div>
+        <div class="dist-pill" id="live-dist">İnşaat aranıyor...</div>
     </div>
 
-    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;">
         <a-entity light="type: hemisphere; intensity: 2"></a-entity>
-        <a-entity id="user-model" gltf-model="" gps-entity-place="latitude: 0; longitude: 0;"></a-entity>
+        <a-entity light="type: directional; intensity: 1.5;" position="1 2 1"></a-entity>
+        <a-entity id="main-model" gltf-model="" gps-entity-place="latitude: 0; longitude: 0;"></a-entity>
         <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
     <script>
+        // Veriyi çek
         const db = JSON.parse(localStorage.getItem('ar_db')) || {};
         const urlParams = new URLSearchParams(window.location.search);
-        const id = urlParams.get('id');
-        let config = db[id];
+        const pid = urlParams.get('id');
+        const config = db[pid];
 
         if (config) {
             document.getElementById('proj-name').innerText = config.name;
-            document.getElementById('proj-status').innerText = "Deneyim hazır.";
-            document.getElementById('start-btn').style.display = "block";
+            document.getElementById('btn-start').style.display = 'block';
         } else {
-            document.getElementById('proj-status').innerText = "HATA: Proje bulunamadı!";
+            document.getElementById('error-msg').style.display = 'block';
+            document.getElementById('proj-desc').innerText = "Geçersiz veya silinmiş proje linki.";
         }
 
-        function start() {
-            document.getElementById('welcome').style.display = 'none';
+        function startAR() {
+            if (!config) return;
+            document.getElementById('welcome-screen').style.display = 'none';
             document.getElementById('nav-header').style.display = 'flex';
-            
-            const m = document.getElementById('user-model');
+
+            const m = document.getElementById('main-model');
             m.setAttribute('gltf-model', `url(${config.model})`);
             m.setAttribute('gps-entity-place', `latitude: ${config.lat}; longitude: ${config.lon};`);
             m.setAttribute('scale', `${config.scale} ${config.scale} ${config.scale}`);
@@ -68,10 +151,19 @@
         }
 
         window.addEventListener('gps-camera-update-position', (e) => {
-            const m = document.getElementById('user-model');
+            const m = document.getElementById('main-model');
             const d = m.getAttribute('distance');
-            if (d !== null) document.getElementById('dist-text').innerText = `İnşaat: ${Math.round(d)} Metre`;
+            if (d !== null) {
+                document.getElementById('live-dist').innerText = `İnşaat: ${Math.round(d)} Metre Uzakta`;
+            }
         });
+
+        // Video tam ekran fix
+        setInterval(() => {
+            const v = document.querySelector('video');
+            if (v) v.style.objectFit = "cover";
+        }, 1000);
     </script>
 </body>
+
 </html>
