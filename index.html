@@ -1,138 +1,178 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <title>İnşaat AR - Profesyonel Çözüm</title>
+    <title>İnşaat AR - Admin & Viewer</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- Kütüphaneler -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
-    <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-        
-        /* Tam Ekran Video Ayarı */
-        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; position: absolute; }
-        
-        /* Giriş ve İzin Ekranı (Hataları çözen anahtar) */
-        #splash-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999; display: flex; 
-            flex-direction: column; align-items: center; justify-content: center;
-            color: white; text-align: center; font-family: sans-serif;
-        }
-        #start-btn {
-            background: #0d6efd; color: white; border: none; padding: 20px 50px;
-            font-size: 20px; font-weight: bold; border-radius: 50px; margin-top: 20px; cursor: pointer;
-        }
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-        /* Navigasyon Paneli */
-        #nav-layer {
-            position: fixed; top: 20px; width: 100%; z-index: 100;
-            display: none; flex-direction: column; align-items: center; pointer-events: none;
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; background: #000; }
+        
+        /* --- ADMIN PANELİ (SOL) --- */
+        #admin-panel {
+            position: fixed; left: 0; top: 0; width: 320px; height: 100%;
+            background: rgba(20, 20, 20, 0.95); z-index: 1000;
+            color: white; padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; gap: 15px;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            transition: transform 0.3s;
         }
-        #nav-box {
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(15px);
-            padding: 15px 30px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.2);
-            color: white; text-align: center;
-        }
-        #arrow { font-size: 40px; display: inline-block; color: #00ff00; }
+        #admin-panel.collapsed { transform: translateX(-100%); }
+        #map { height: 200px; border-radius: 10px; margin: 10px 0; border: 1px solid #444; }
+        .control-group { background: #2a2a2a; padding: 10px; border-radius: 8px; }
+        label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; }
+        input[type="range"] { width: 100%; }
+        button { background: #0d6efd; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        
+        /* --- AR UI --- */
+        #ar-ui { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; pointer-events: none; z-index: 100; }
+        .info-box { background: rgba(0,0,0,0.7); padding: 15px 30px; border-radius: 100px; color: white; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); }
+        
+        /* --- TOGGLE BUTTON --- */
+        #toggle-admin { position: fixed; left: 10px; top: 10px; z-index: 1001; background: #333; color: white; border: none; padding: 10px; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; }
+        
+        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; position: absolute; }
     </style>
 </head>
 <body>
 
-    <!-- Giriş Ekranı (Sensörler için kullanıcı etkileşimi şart) -->
-    <div id="splash-screen">
-        <h2>İnşaat AR Projesi</h2>
-        <p>AR Deneyimini başlatmak için dokunun.<br>(Kamera, Konum ve Hareket izni istenecek)</p>
-        <button id="start-btn">SİSTEMİ BAŞLAT</button>
-    </div>
+    <!-- Toggle Butonu -->
+    <button id="toggle-admin">⚙️</button>
 
-    <!-- Navigasyon -->
-    <div id="nav-layer">
-        <div id="nav-box">
-            <div id="arrow">↑</div>
-            <div id="dist-txt" style="font-size: 22px; font-weight: bold;">Konum aranıyor...</div>
-            <div id="hint-txt" style="font-size: 12px; opacity: 0.7;">Lütfen ilerleyin</div>
-        </div>
-    </div>
-
-    <a-scene
-        vr-mode-ui="enabled: false"
-        embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;">
+    <!-- Admin Paneli -->
+    <div id="admin-panel" id="adminPanel">
+        <h3 style="margin-top:0;">İnşaat AR Admin</h3>
         
-        <!-- Işıklandırma Hatası Giderildi -->
-        <a-entity light="type: ambient; intensity: 1.5;"></a-entity>
-        <a-entity light="type: directional; intensity: 1.5;" position="1 1 1"></a-entity>
+        <div class="control-group">
+            <label>1. KONUM SEÇ (Haritaya Tıkla)</label>
+            <div id="map"></div>
+            <div id="coords" style="font-size: 10px; color: #00ff00;">Enlem: -, Boylam: -</div>
+        </div>
 
-        <!-- Odandaki Model -->
+        <div class="control-group">
+            <label>2. OBJE AYARLARI</label>
+            <label>Dönüş (Rotation Y)</label>
+            <input type="range" id="rot-y" min="0" max="360" value="0">
+            <label>Ölçek (Scale)</label>
+            <input type="range" id="scale" min="1" max="50" value="10">
+            <label>Yükseklik (Altitude)</label>
+            <input type="range" id="alt" min="-10" max="50" value="0">
+        </div>
+
+        <div class="control-group">
+            <label>3. IŞIKLANDIRMA</label>
+            <label>Şiddet (Intensity)</label>
+            <input type="range" id="light-int" min="0" max="100" value="30">
+        </div>
+
+        <button onclick="copyConfig()">AYARLARI KOPYALA</button>
+        <p style="font-size: 9px; color: #666;">Not: Bu ayarları kopyalayıp koda yapıştırabilir veya paylaşabilirsiniz.</p>
+    </div>
+
+    <!-- AR Arayüzü -->
+    <div id="ar-ui">
+        <div class="info-box" id="dist-info">Konum Bekleniyor...</div>
+    </div>
+
+    <!-- AR Sahnesi -->
+    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
+        
+        <!-- Işıklar -->
+        <a-entity id="main-light" light="type: hemisphere; intensity: 3"></a-entity>
+        
+        <!-- İnşaat Modeli -->
         <a-entity 
             id="target-model"
             gltf-model="url(model.glb)"
             gps-entity-place="latitude: 41.017039; longitude: 28.858800;"
-            scale="10 10 10">
+            rotation="0 0 0"
+            scale="10 10 10"
+            position="0 0 0">
         </a-entity>
 
-        <a-camera gps-camera="minDistance: 5; gpsMinDistance: 5;" rotation-reader></a-camera>
+        <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
     <script>
-        const splash = document.getElementById('splash-screen');
-        const startBtn = document.getElementById('start-btn');
-        const navLayer = document.getElementById('nav-layer');
-        const distTxt = document.getElementById('dist-txt');
-        const arrow = document.getElementById('arrow');
+        // --- DEĞİŞKENLER ---
+        const model = document.querySelector('#target-model');
+        const light = document.querySelector('#main-light');
+        let currentLat = 41.017039;
+        let currentLon = 28.858800;
 
-        startBtn.addEventListener('click', () => {
-            // 1. iOS Hareket Sensörü İzni (event.alpha null hatasını çözer)
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('deviceorientation', handleOrientation);
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                window.addEventListener('deviceorientation', handleOrientation);
-            }
+        // --- HARİTA BAŞLATMA ---
+        const map = L.map('map').setView([41.017039, 28.858800], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        let marker = L.marker([41.017039, 28.858800]).addTo(map);
 
-            // 2. Ekranı Kapat ve Başlat
-            splash.style.display = 'none';
-            navLayer.style.display = 'flex';
+        map.on('click', (e) => {
+            currentLat = e.latlng.lat;
+            currentLon = e.latlng.lng;
+            marker.setLatLng(e.latlng);
+            document.getElementById('coords').innerText = `Lat: ${currentLat.toFixed(6)}, Lon: ${currentLon.toFixed(6)}`;
+            
+            // Sahnedeki Modeli Güncelle
+            model.setAttribute('gps-entity-place', `latitude: ${currentLat}; longitude: ${currentLon};`);
         });
 
-        function handleOrientation(e) {
-            const alpha = e.webkitCompassHeading || e.alpha;
-            if (alpha) {
-                arrow.style.transform = `rotate(${360 - alpha}deg)`;
-            }
+        // --- CANLI AYARLAR ---
+        document.getElementById('rot-y').addEventListener('input', (e) => {
+            model.setAttribute('rotation', `0 ${e.target.value} 0`);
+        });
+
+        document.getElementById('scale').addEventListener('input', (e) => {
+            const s = e.target.value;
+            model.setAttribute('scale', `${s} ${s} ${s}`);
+        });
+
+        document.getElementById('alt').addEventListener('input', (e) => {
+            // A-Frame GPS sisteminde yükseklik 'position' Y ekseni ile verilebilir (yerel simülasyon)
+            const pos = model.getAttribute('position');
+            model.setAttribute('position', `${pos.x} ${e.target.value} ${pos.z}`);
+        });
+
+        document.getElementById('light-int').addEventListener('input', (e) => {
+            light.setAttribute('light', `intensity: ${e.target.value / 10}`);
+        });
+
+        // --- UI KONTROLLERİ ---
+        document.getElementById('toggle-admin').onclick = () => {
+            document.getElementById('admin-panel').classList.toggle('collapsed');
+        };
+
+        function copyConfig() {
+            const config = {
+                lat: currentLat,
+                lon: currentLon,
+                rotation: model.getAttribute('rotation').y,
+                scale: model.getAttribute('scale').x,
+                altitude: model.getAttribute('position').y,
+                light: light.getAttribute('light').intensity
+            };
+            const json = JSON.stringify(config);
+            navigator.clipboard.writeText(json);
+            alert("Yeni ayarlar kopyalandı:\n" + json);
         }
 
-        // GPS Güncellemesi
+        // --- GPS TAKİBİ ---
         window.addEventListener('gps-camera-update-position', (e) => {
-            const distance = document.getElementById('target-model').getAttribute('distance');
-            if (distance !== null) {
-                const d = Math.round(distance);
-                distTxt.innerText = `${d} Metre Kaldı`;
-                
-                if (d < 5) {
-                    arrow.innerText = "●";
-                    document.getElementById('hint-txt').innerText = "HEDEFE VARILDI";
-                } else {
-                    arrow.innerText = "↑";
-                    document.getElementById('hint-txt').innerText = "Modele doğru yönelin";
-                }
+            const dist = model.getAttribute('distance');
+            if (dist) {
+                document.getElementById('dist-info').innerText = `İnşaat: ${Math.round(dist)} Metre Mesafede`;
             }
         });
 
-        // Tam ekran video zorlaması
+        // Video Fix
         setInterval(() => {
             const v = document.querySelector('video');
-            if(v) {
-                v.style.maxWidth = "none";
-                v.style.width = "100vw";
-                v.style.height = "100vh";
-            }
+            if(v) v.style.objectFit = "cover";
         }, 1000);
     </script>
 </body>
