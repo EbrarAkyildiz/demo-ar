@@ -1,112 +1,258 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
-    <title>AR Admin - Hepsi Bir Arada</title>
+    <title>AR Admin Studio - Full Screen</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
+
+    <!-- AR & Map Kütüphaneleri -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        :root { --p: #007bff; }
-        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; }
-        
-        /* --- TEK EKRAN SIDEBAR --- */
+        :root {
+            --p: #007bff;
+            --glass: rgba(15, 15, 15, 0.8);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, sans-serif;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        /* --- FULL SCREEN VIDEO FIX --- */
+        video {
+            width: 100vw !important;
+            height: 100vh !important;
+            object-fit: cover !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .a-canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* --- ŞEFFAF YAN PANEL --- */
         #admin-panel {
-            position: fixed; left: 0; top: 0; width: 340px; height: 100%;
-            background: rgba(15, 15, 15, 0.95); z-index: 2000; padding: 20px;
-            display: flex; flex-direction: column; gap: 15px; overflow-y: auto;
-            border-right: 1px solid #333; transition: transform 0.3s ease;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 320px;
+            height: 100%;
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            z-index: 2000;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateX(-100%);
         }
-        #admin-panel.open { transform: translateX(0); }
+
+        #admin-panel.open {
+            transform: translateX(0);
+        }
 
         #menu-btn {
-            position: fixed; left: 15px; top: 15px; z-index: 2001;
-            background: var(--p); color: white; border: none; width: 45px; height: 45px;
-            border-radius: 12px; cursor: pointer; font-size: 20px;
+            position: fixed;
+            left: 15px;
+            top: 15px;
+            z-index: 2001;
+            background: var(--p);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
-        /* Proje Seçici - Üstte Sabit */
-        .header-section { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 10px; }
-        #project-select { width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 8px; font-size: 14px; }
-
-        /* Dashboard Kartları */
-        .card { background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
-        label { display: block; font-size: 10px; color: #888; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-        input { background: #222; border: 1px solid #333; color: #fff; padding: 8px; border-radius: 6px; width: 100%; margin-bottom: 8px; font-size: 13px; }
-        
-        .btn { background: var(--p); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 13px; }
-        .btn-success { background: #28a745; }
-        
-        #map { height: 150px; border-radius: 10px; margin: 8px 0; border: 1px solid #444; }
-        
-        /* Sağ Üst Bilgi */
-        #info-bar {
-            position: fixed; top: 15px; right: 15px; z-index: 1000;
-            background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 30px;
-            font-size: 12px; pointer-events: none; border: 1px solid rgba(255,255,255,0.1);
+        /* --- DURUM ÇUBUĞU --- */
+        #status-bar {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
         }
 
-        /* Yerleştirme Butonu */
-        #place-overlay { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; z-index: 1500; pointer-events: none; }
-        #place-btn { background: rgba(40, 167, 69, 0.9); color: white; border: none; padding: 15px 35px; border-radius: 50px; font-weight: bold; pointer-events: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.5); cursor: pointer; }
+        /* --- SÜRÜKLEME / HAREKET KONTROLLERİ --- */
+        #drag-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1500;
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            gap: 10px;
+        }
 
-        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; position: absolute; }
+        .drag-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .drag-btn:active {
+            background: var(--p);
+            transform: scale(0.9);
+        }
+
+        /* --- DASHBOARD --- */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        label {
+            display: block;
+            font-size: 10px;
+            color: #aaa;
+            margin-bottom: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        select {
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: var(--p);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-del {
+            background: #dc3545;
+            margin-top: 10px;
+        }
+
+        #map {
+            height: 160px;
+            border-radius: 12px;
+            margin: 10px 0;
+            border: 1px solid #444;
+        }
     </style>
 </head>
+
 <body>
 
     <button id="menu-btn" onclick="toggleMenu()">☰</button>
 
-    <div id="info-bar">
-        📏 <span id="dist">0</span>m | 📍 <span id="gps">GPS Sinyali...</span>
+    <div id="status-bar">
+        📏 <span id="dist">0</span>m | 📍 <span id="gps">GPS Aranıyor...</span>
     </div>
 
-    <div id="place-overlay">
-        <button id="place-btn" onclick="placeModel()">🎯 BURAYA YERLEŞTİR</button>
+    <!-- HAREKET KONTROLLERİ (Sürükleme yerine hassas yerleştirme) -->
+    <div id="drag-controls" style="display:none">
+        <div></div><button class="drag-btn" onclick="moveModel('N')">↑</button>
+        <div></div>
+        <button class="drag-btn" onclick="moveModel('W')">←</button>
+        <button class="drag-btn" onclick="syncCoords()"
+            style="font-size:12px; background:rgba(40,167,69,0.5)">OK</button>
+        <button class="drag-btn" onclick="moveModel('E')">→</button>
+        <div></div><button class="drag-btn" onclick="moveModel('S')">↓</button>
+        <div></div>
     </div>
 
-    <!-- TEK EKRAN PANEL -->
+    <!-- ADMIN PANEL -->
     <div id="admin-panel">
-        <div class="header-section">
-            <h3 style="margin:0 0 10px 0">🏗️ AR Yönetim</h3>
-            <label>AKTİF PROJE SEÇİN</label>
-            <select id="project-select" onchange="selectProject(this.value)">
-                <option value="">-- Proje Seçin --</option>
-            </select>
-            <button class="btn" style="background:#333; margin-top:10px" onclick="addNew()">+ Yeni Proje Oluştur</button>
-        </div>
+        <h2 style="margin:0 0 20px 0">AR Studio PRO</h2>
+
+        <label>PROJE SEÇİN</label>
+        <select id="project-combo" onchange="loadProj(this.value)">
+            <option value="">-- Proje Seç --</option>
+        </select>
+        <button class="btn" style="background:#333; margin-bottom:20px" onclick="addNew()">+ Yeni Proje Oluştur</button>
 
         <div id="editor" style="display:none">
             <div class="card">
-                <label>TEMEL BİLGİLER</label>
+                <label>PROJE AYARLARI</label>
                 <input type="text" id="p-name" placeholder="Proje Adı">
                 <input type="text" id="p-model" placeholder="model.glb">
-                <button class="btn" style="background:#6f42c1; font-size:11px" onclick="useMyPos()">📍 ŞUANKİ KONUMUMU AL</button>
                 <div id="map"></div>
+                <button class="btn" style="background:#6f42c1; font-size:11px" onclick="setAtMe()">📍 OLDUĞUM YERE
+                    GETİR</button>
             </div>
 
-            <div class="card">
-                <label>AR AYARLARI (CANLI)</label>
-                <label>ÖLÇEK: <span id="val-s">10</span></label>
+            <div class="card" style="margin-top:10px">
+                <label>GÖRSEL AYARLAR</label>
+                <label>Ölçek: <span id="v-s">10</span></label>
                 <input type="range" id="p-scale" min="1" max="100" value="10">
-                <label>DÖNÜŞ: <span id="val-r">0</span>°</label>
+                <label>Dönüş: <span id="v-r">0</span>°</label>
                 <input type="range" id="p-rot" min="0" max="360" value="0">
-                <label>ZEMİN: <span id="val-a">0</span></label>
+                <label>Yer Yüksekliği: <span id="v-a">0</span></label>
                 <input type="range" id="p-alt" min="-10" max="20" value="0" step="0.1">
             </div>
 
-            <button class="btn btn-success" onclick="save()">✅ TÜM DEĞİŞİKLİKLERİ KAYDET</button>
-            <button class="btn" style="background:transparent; color:#ea4335; margin-top:5px" onclick="del()">Projeyi Sil</button>
+            <button class="btn" style="background:#28a745; margin-top:15px" onclick="save()">✅ TÜMÜNÜ KAYDET</button>
+            <button class="btn btn-del" onclick="delProj()">🗑️ PROJEYİ SİL</button>
 
-            <div class="card" style="margin-top:20px; background:#000">
-                <label>PAYLAŞILABİLİR LİNK</label>
-                <div id="p-link" style="font-size:10px; color:#007bff; word-break:break-all; margin:8px 0">Gereken ID bulunamadı.</div>
-                <button class="btn" style="padding:5px; font-size:11px" onclick="copyLink()">Linki Kopyala</button>
+            <div class="card" style="margin-top:20px; background:rgba(0,0,0,0.5)">
+                <label>PAYLAŞIM LİNKİ</label>
+                <div id="p-link" style="font-size:9px; color:var(--p); word-break:break-all; margin:10px 0"></div>
+                <button class="btn" style="padding:8px; font-size:11px; background:#444" onclick="copyLink()">Linki
+                    Kopyala</button>
             </div>
         </div>
     </div>
@@ -123,12 +269,12 @@
         let activeId = null;
         let myPos = { lat: 0, lon: 0 };
 
-        const map = L.map('map').setView([41.017039, 28.858800], 15);
+        const map = L.map('map').setView([41.017, 28.858], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        let marker = L.marker([41.017039, 28.858800]).addTo(map);
+        let marker = L.marker([41.017, 28.858]).addTo(map);
 
         map.on('click', (e) => {
-            if(!activeId) return;
+            if (!activeId) return;
             db[activeId].lat = e.latlng.lat;
             db[activeId].lon = e.latlng.lng;
             marker.setLatLng(e.latlng);
@@ -138,10 +284,10 @@
         window.addEventListener('gps-camera-update-position', (e) => {
             myPos.lat = e.detail.position.latitude;
             myPos.lon = e.detail.position.longitude;
-            document.getElementById('gps').innerText = `${myPos.lat.toFixed(4)}, ${myPos.lon.toFixed(4)}`;
-            if(activeId) {
+            document.getElementById('gps').innerText = `${myPos.lat.toFixed(5)}, ${myPos.lon.toFixed(5)}`;
+            if (activeId) {
                 const dist = document.getElementById('ar-obj').getAttribute('distance');
-                if(dist !== null) document.getElementById('dist').innerText = Math.round(dist);
+                if (dist !== null) document.getElementById('dist').innerText = Math.round(dist);
             }
         });
 
@@ -149,54 +295,43 @@
             const p = document.getElementById('admin-panel');
             p.classList.toggle('open');
             document.getElementById('menu-btn').innerText = p.classList.contains('open') ? '✕' : '☰';
-            if(p.classList.contains('open')) setTimeout(() => map.invalidateSize(), 300);
+            if (p.classList.contains('open')) setTimeout(() => map.invalidateSize(), 300);
         }
 
         function refreshList() {
-            const sel = document.getElementById('project-select');
-            sel.innerHTML = '<option value="">-- Proje Seçin --</option>';
-            for(let id in db) {
+            const combo = document.getElementById('project-combo');
+            combo.innerHTML = '<option value="">-- Proje Seç --</option>';
+            for (let id in db) {
                 const opt = document.createElement('option');
                 opt.value = id;
                 opt.innerText = db[id].name;
-                opt.selected = (activeId === id);
-                sel.appendChild(opt);
+                opt.selected = (id === activeId);
+                combo.appendChild(opt);
             }
         }
 
-        function selectProject(id) {
-            if(!id) { document.getElementById('editor').style.display='none'; activeId=null; return; }
+        function loadProj(id) {
+            if (!id) { document.getElementById('editor').style.display = 'none'; document.getElementById('drag-controls').style.display = 'none'; return; }
             activeId = id;
             document.getElementById('editor').style.display = 'block';
+            document.getElementById('drag-controls').style.display = 'grid';
             const p = db[id];
             document.getElementById('p-name').value = p.name;
             document.getElementById('p-model').value = p.model;
             document.getElementById('p-scale').value = p.scale;
             document.getElementById('p-rot').value = p.rot;
             document.getElementById('p-alt').value = p.alt;
-            
-            document.getElementById('val-s').innerText = p.scale;
-            document.getElementById('val-r').innerText = p.rot;
-            document.getElementById('val-a').innerText = p.alt;
-
+            document.getElementById('v-s').innerText = p.scale;
+            document.getElementById('v-r').innerText = p.rot;
+            document.getElementById('v-a').innerText = p.alt;
             marker.setLatLng([p.lat, p.lon]);
             map.panTo([p.lat, p.lon]);
             document.getElementById('p-link').innerText = window.location.href.replace('admin.html', 'index.html') + '?id=' + id;
             syncAR();
         }
 
-        function addNew() {
-            const n = prompt("Yeni Proje Adı:");
-            if(!n) return;
-            const id = 'p' + Date.now();
-            db[id] = { id: id, name: n, model: 'model.glb', lat: 41.017, lon: 28.858, scale: 10, rot: 0, alt: 0 };
-            saveDB();
-            refreshList();
-            selectProject(id);
-        }
-
         function syncAR() {
-            if(!activeId) return;
+            if (!activeId) return;
             const p = db[activeId];
             const el = document.getElementById('ar-obj');
             el.setAttribute('gltf-model', `url(${p.model})`);
@@ -206,28 +341,29 @@
             el.setAttribute('position', `0 ${p.alt} 0`);
         }
 
-        function placeModel() {
-            if(!activeId || myPos.lat === 0) return;
-            const camera = document.querySelector('[gps-camera]');
-            const rotation = camera.getAttribute('rotation');
-            const dist = 8;
-            const angle = (rotation.y) * Math.PI / 180;
-            const dN = Math.cos(angle) * dist;
-            const dE = -Math.sin(angle) * dist;
-            const R = 6371000;
-            const nLat = myPos.lat + (dN / R) * (180 / Math.PI);
-            const nLon = myPos.lon + (dE / (R * Math.cos(myPos.lat * Math.PI / 180))) * (180 / Math.PI);
-            db[activeId].lat = nLat;
-            db[activeId].lon = nLon;
-            marker.setLatLng([nLat, nLon]);
-            map.panTo([nLat, nLon]);
+        function moveModel(dir) {
+            if (!activeId) return;
+            const step = 0.00001; // Yaklaşık 1 metre
+            if (dir === 'N') db[activeId].lat += step;
+            if (dir === 'S') db[activeId].lat -= step;
+            if (dir === 'E') db[activeId].lon += step;
+            if (dir === 'W') db[activeId].lon -= step;
+            marker.setLatLng([db[activeId].lat, db[activeId].lon]);
             syncAR();
-            document.getElementById('place-btn').innerText = "✅ YERLEŞTİ!";
-            setTimeout(() => document.getElementById('place-btn').innerText = "🎯 BURAYA YERLEŞTİR", 2000);
         }
 
-        function useMyPos() {
-            if(myPos.lat === 0) return;
+        function addNew() {
+            const n = prompt("Proje Adı:");
+            if (!n) return;
+            const id = 'p' + Date.now();
+            db[id] = { id: id, name: n, model: 'model.glb', lat: 41.017, lon: 28.858, scale: 10, rot: 0, alt: 0 };
+            saveDB();
+            refreshList();
+            loadProj(id);
+        }
+
+        function setAtMe() {
+            if (myPos.lat === 0) return;
             db[activeId].lat = myPos.lat;
             db[activeId].lon = myPos.lon;
             marker.setLatLng([myPos.lat, myPos.lon]);
@@ -240,18 +376,19 @@
                 const val = parseFloat(e.target.value);
                 const key = id.replace('p-', '');
                 db[activeId][key === 'scale' ? 'scale' : key === 'rot' ? 'rot' : 'alt'] = val;
-                document.getElementById('val-' + id.charAt(2)).innerText = val;
+                document.getElementById('v-' + id.charAt(2)).innerText = val;
                 syncAR();
             };
         });
 
-        function save() { saveDB(); alert("Tüm ayarlar kaydedildi!"); }
-        function del() { if(confirm("Projeyi sil?")) { delete db[activeId]; saveDB(); location.reload(); } }
+        function save() { saveDB(); alert("Kaydedildi!"); }
+        function delProj() { if (confirm("Projeyi silmek istediğine emin misin?")) { delete db[activeId]; saveDB(); location.reload(); } }
         function saveDB() { localStorage.setItem('ar_db', JSON.stringify(db)); }
         function copyLink() { navigator.clipboard.writeText(document.getElementById('p-link').innerText); alert("Link Kopyalandı!"); }
 
         refreshList();
-        setInterval(() => { const v=document.querySelector('video'); if(v) v.style.objectFit="cover"; }, 1000);
+        setInterval(() => { const v = document.querySelector('video'); if (v) v.style.objectFit = "cover"; }, 1000);
     </script>
 </body>
+
 </html>
