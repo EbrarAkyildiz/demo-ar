@@ -441,7 +441,7 @@
             const el = document.getElementById('ar-obj');
             el.setAttribute('gltf-model', '');
             setTimeout(() => {
-                el.setAttribute('gltf-model', 'url(' + p.model + ')');
+                el.setAttribute('gltf-model', p.model);
                 el.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lon};`);
                 el.setAttribute('scale', `${p.scale} ${p.scale} ${p.scale}`);
                 el.setAttribute('rotation', `0 ${p.rot} 0`);
