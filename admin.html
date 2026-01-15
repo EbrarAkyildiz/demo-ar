@@ -2,11 +2,12 @@
 <html lang="tr">
 
 <head>
-    <title>AR Admin Studio - Bring to Front</title>
+    <title>AR Admin Studio - Fixed & Stable</title>
     <meta charset="utf-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
+    <!-- Stabil A-Frame & AR.js -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -26,11 +27,11 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #000 !important;
+            background: transparent !important;
             font-family: -apple-system, sans-serif;
         }
 
-        /* Kamera Katmanları */
+        /* Kamera Katmanları - Siyah ekranı bitirmek için zorunlu */
         video#arjs-video {
             position: fixed !important;
             top: 0 !important;
@@ -38,7 +39,7 @@
             width: 100vw !important;
             height: 100vh !important;
             object-fit: cover !important;
-            z-index: -2 !important;
+            z-index: -5 !important;
             display: block !important;
         }
 
@@ -47,7 +48,7 @@
             background: transparent !important;
         }
 
-        /* --- ANA PANEL --- */
+        /* --- UI MODÜLLERİ --- */
         #admin-panel {
             position: fixed;
             left: 0;
@@ -86,9 +87,9 @@
             border-radius: 15px;
             cursor: pointer;
             font-size: 24px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
-        /* --- ÖNÜME GETİR BUTONU (BÜYÜK) --- */
         #place-overlay {
             position: fixed;
             bottom: 30px;
@@ -124,6 +125,7 @@
             font-size: 11px;
             color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
         }
 
         /* Merkez Nişangah */
@@ -214,16 +216,22 @@
             justify-content: center;
             text-align: center;
             color: white;
+            padding: 20px;
+            box-sizing: border-box;
         }
     </style>
 </head>
 
 <body>
 
+    <!-- Başlatma Ekranı -->
     <div id="splash">
-        <h2 style="margin-bottom:15px;">AR STUDIO ADMIN</h2>
-        <button class="btn" style="width:250px; padding:20px" onclick="startSystem()">SİSTEMİ & KAMERAYI BAŞLAT</button>
-        <p style="color:#888; margin-top:15px; font-size:12px">Modellerin gözükmesi için GPS gereklidir.</p>
+        <h2 style="margin-bottom:15px;">AR STUDIO PRO</h2>
+        <p style="color:#aaa; margin-bottom:20px; font-size:14px;">Kamera ve Sensörleri Kullanmak İçin Butona Basınız
+        </p>
+        <button class="btn" style="width:250px; padding:20px; font-size:16px;" onclick="startSystem()">SİSTEMİ &
+            KAMERAYI BAŞLAT</button>
+        <p style="color:#666; margin-top:20px; font-size:11px;">Not: GPS ve Kamera izni gereklidir.</p>
     </div>
 
     <button id="menu-btn" onclick="toggleMenu()">☰</button>
@@ -240,7 +248,7 @@
 
     <div id="admin-panel">
         <h3 style="margin:0 0 10px 0">AR Studio</h3>
-        <label>PROJE SEÇ</label>
+        <label>PROJE LİSTESİ</label>
         <select id="proj-select" onchange="loadProj(this.value)">
             <option value="">-- Seçiniz --</option>
         </select>
@@ -269,7 +277,7 @@
     </div>
 
     <a-scene vr-mode-ui="enabled: false" embedded arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;"
-        renderer="alpha: true;">
+        renderer="alpha: true; colorManagement: true;">
 
         <a-entity light="type: hemisphere; intensity: 2"></a-entity>
         <a-entity light="type: directional; intensity: 1.5;" position="1 2 1"></a-entity>
@@ -288,6 +296,14 @@
         const map = L.map('map').setView([41.017, 28.858], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         let marker = L.marker([41.017, 28.858]).addTo(map);
+
+        map.on('click', (e) => {
+            if (!activeId) return;
+            db[activeId].lat = e.latlng.lat;
+            db[activeId].lon = e.latlng.lng;
+            marker.setLatLng(e.latlng);
+            sync();
+        });
 
         // --- SÜRÜKLEME ---
         window.addEventListener('touchstart', (e) => {
@@ -309,12 +325,29 @@
 
         window.addEventListener('touchend', () => { isDragging = false; });
 
+        // --- SİSTEM BAŞLATMA ---
         function startSystem() {
+            // iOS Sensör İzni
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(res => { finish(); }).catch(finish);
-            } else finish();
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        finishStart();
+                    })
+                    .catch(err => {
+                        console.error("İzin hatası:", err);
+                        finishStart();
+                    });
+            } else {
+                finishStart();
+            }
         }
-        function finish() { document.getElementById('splash').style.display = 'none'; }
+
+        function finishStart() {
+            document.getElementById('splash').style.display = 'none';
+            // Video katmanını zorla göster
+            const v = document.getElementById('arjs-video');
+            if (v) v.style.display = "block";
+        }
 
         function toggleMenu() {
             const p = document.getElementById('admin-panel');
@@ -332,6 +365,16 @@
                 o.selected = (id === activeId);
                 c.appendChild(o);
             }
+        }
+
+        function addNew() {
+            const n = prompt("Yeni Proje Adı:");
+            if (!n) return;
+            const id = 'p' + Date.now();
+            db[id] = { id: id, name: n, model: 'model.glb', lat: 41.017, lon: 28.858, scale: 10, rot: 0, alt: 0 };
+            localStorage.setItem('ar_db', JSON.stringify(db));
+            refreshList();
+            loadProj(id);
         }
 
         function loadProj(id) {
@@ -357,42 +400,26 @@
             sync();
         }
 
-        // --- OBJE ÖNÜME GELSİN ---
         function bringToMe() {
-            if (!activeId) return;
-            if (myPos.lat === 0) {
-                alert("GPS konumu henüz alınamadı. Lütfen bekleyin.");
-                return;
-            }
-
+            if (!activeId || myPos.lat === 0) return;
             const cam = document.querySelector('[gps-camera]');
             const rot = cam.getAttribute('rotation');
-            const dist = 6; // 6 metre ileriye koy
+            const dist = 6;
             const angle = (rot.y) * Math.PI / 180;
-
             const dN = Math.cos(angle) * dist;
             const dE = -Math.sin(angle) * dist;
             const R = 6371000;
-
             db[activeId].lat = myPos.lat + (dN / R) * (180 / Math.PI);
             db[activeId].lon = myPos.lon + (dE / (R * Math.cos(myPos.lat * Math.PI / 180))) * (180 / Math.PI);
-
             marker.setLatLng([db[activeId].lat, db[activeId].lon]);
             map.panTo([db[activeId].lat, db[activeId].lon]);
-
             sync();
-
-            const btn = document.getElementById('bring-btn');
-            btn.innerText = "✅ OBJE GELDİ";
-            setTimeout(() => btn.innerText = "🎯 OBJE ÖNÜME GELSİN", 2000);
         }
 
         function sync() {
             if (!activeId) return;
             const p = db[activeId];
             const el = document.getElementById('ar-obj');
-
-            // Modeli zorla güncelle
             el.setAttribute('gltf-model', '');
             setTimeout(() => {
                 el.setAttribute('gltf-model', 'url(' + p.model + ')');
@@ -415,8 +442,9 @@
         ['p-scale', 'p-rot', 'p-alt'].forEach(id => {
             document.getElementById(id).oninput = (e) => {
                 const v = parseFloat(e.target.value);
-                db[activeId][id.replace('p-', '')] = v;
-                document.getElementById('v-' + id.charAt(2)).innerText = v;
+                const key = id.replace('p-', '');
+                db[activeId][key] = v;
+                if (id === 'p-scale') document.getElementById('v-s').innerText = v;
                 sync();
             };
         });
@@ -426,10 +454,17 @@
         function copyLink() { navigator.clipboard.writeText(document.getElementById('p-link').innerText); alert("Kopyalandı!"); }
 
         refreshList();
+
+        // Kamera ve Video Görünürlüğü İçin Agresif Düzeltme
         setInterval(() => {
             const v = document.getElementById('arjs-video');
-            if (v) { v.style.zIndex = "-5"; v.style.position = "fixed"; v.style.display = "block"; }
-        }, 1000);
+            if (v) {
+                v.style.zIndex = "-5";
+                v.style.position = "fixed";
+                v.style.display = "block";
+                document.body.style.backgroundColor = "transparent";
+            }
+        }, 800);
     </script>
 </body>
 
