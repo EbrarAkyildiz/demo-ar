@@ -265,6 +265,35 @@
             }
         });
 
+        // --- CANLI AR EKRANINA DOKUNARAK YERLEŞTİRME ---
+        document.querySelector('a-scene').addEventListener('click', () => {
+            if (!activeId || userPos.lat === 0) return;
+
+            // Kameranın baktığı açıyı al
+            const camera = document.querySelector('[gps-camera]');
+            const rotation = camera.getAttribute('rotation');
+
+            // Kameranın baktığı yöne doğru 10 metre ileriye yerleştir
+            const distance = 10;
+            const angle = (rotation.y) * Math.PI / 180;
+
+            const dNorth = Math.cos(angle) * distance;
+            const dEast = -Math.sin(angle) * distance;
+
+            const R = 6371000; // Dünya yarıçapı
+            const newLat = userPos.lat + (dNorth / R) * (180 / Math.PI);
+            const newLon = userPos.lon + (dEast / (R * Math.max(Math.cos(userPos.lat * Math.PI / 180), 0.001))) * (180 / Math.PI);
+
+            db[activeId].lat = newLat;
+            db[activeId].lon = newLon;
+
+            marker.setLatLng([newLat, newLon]);
+            map.panTo([newLat, newLon]);
+
+            updateARView();
+            console.log("Model yeni noktaya taşındı!");
+        });
+
         function useCurrentLocation() {
             if (userPos.lat === 0) { alert("Sinyal bekleniyor..."); return; }
             db[activeId].lat = userPos.lat;
