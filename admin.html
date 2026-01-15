@@ -4,11 +4,11 @@
 <head>
     <title>AR Studio Pro - Admin Panel</title>
     <meta charset="utf-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <!-- Model Viewer - iOS ve Android Native AR -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <!-- Leaflet Harita -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -18,112 +18,72 @@
             --success: #28a745;
             --danger: #dc3545;
             --warning: #ffc107;
-            --dark: rgba(12, 12, 12, 0.97);
+            --dark: #0d0d1a;
             --scan: #00f2ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body,
         html {
-            margin: 0;
-            padding: 0;
             width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: transparent !important;
+            min-height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: white;
+            background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
         }
 
-        video#arjs-video {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            object-fit: cover !important;
-            z-index: -5 !important;
-        }
-
-        .a-canvas {
-            z-index: -1 !important;
-            background: transparent !important;
-        }
-
-        /* Admin Panel */
-        #admin-panel {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 340px;
-            height: 100%;
-            background: var(--dark);
-            backdrop-filter: blur(30px);
-            transform: translateX(-100%);
-            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow-y: auto;
-            box-sizing: border-box;
-            border-right: 1px solid rgba(255, 255, 255, 0.08);
-            z-index: 5000;
+        /* Header */
+        .header {
             padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        #admin-panel.open {
-            transform: translateX(0);
-        }
-
-        #admin-panel::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        #admin-panel::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 4px;
-        }
-
-        #menu-btn {
-            position: fixed;
-            left: 15px;
-            top: 15px;
-            z-index: 5001;
-            background: var(--primary);
-            color: white;
-            border: none;
-            width: 55px;
-            height: 55px;
-            border-radius: 16px;
-            font-size: 26px;
-            cursor: pointer;
-        }
-
-        .panel-header {
+        .header h1 {
             font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--scan);
-            border-bottom: 1px solid #222;
-            padding-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            font-weight: 800;
+            margin-bottom: 5px;
         }
 
-        .section {
+        .header p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Main Layout */
+        .main {
+            padding: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 15px;
             margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .section-title {
-            font-size: 10px;
+        .card-title {
+            font-size: 11px;
             font-weight: 700;
             color: #666;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 8px;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
-        .section-title::before {
+        .card-title::before {
             content: '';
             width: 3px;
             height: 12px;
@@ -131,35 +91,25 @@
             border-radius: 2px;
         }
 
-        .card {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 8px;
-        }
-
-        input[type="text"],
-        input[type="url"],
-        input[type="color"],
+        /* Form Elements */
+        input,
         select,
         textarea {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #333;
-            color: #fff;
-            padding: 12px;
-            border-radius: 10px;
             width: 100%;
-            font-size: 13px;
-            margin-bottom: 8px;
-            box-sizing: border-box;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 10px;
         }
 
         input:focus,
         select:focus,
         textarea:focus {
-            border-color: var(--primary);
             outline: none;
+            border-color: var(--primary);
         }
 
         textarea {
@@ -167,25 +117,26 @@
             min-height: 60px;
         }
 
+        /* Slider */
         .slider-row {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .slider-label {
-            font-size: 11px;
+            font-size: 12px;
             color: #888;
-            min-width: 80px;
+            min-width: 70px;
         }
 
         .slider-value {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--scan);
-            font-weight: 700;
-            min-width: 35px;
+            min-width: 40px;
             text-align: right;
+            font-weight: 700;
         }
 
         input[type="range"] {
@@ -198,22 +149,23 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             background: var(--scan);
             border-radius: 50%;
             cursor: pointer;
         }
 
+        /* Toggle */
         .toggle-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
+            margin-bottom: 12px;
         }
 
         .toggle-label {
-            font-size: 12px;
+            font-size: 13px;
             color: #aaa;
         }
 
@@ -247,13 +199,14 @@
             left: 22px;
         }
 
+        /* Buttons */
         .btn {
             width: 100%;
             padding: 14px;
             border: none;
             border-radius: 12px;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
             margin-bottom: 8px;
             transition: 0.2s;
@@ -279,28 +232,32 @@
             border: 1px solid var(--danger);
         }
 
-        .btn-scan {
-            background: var(--scan);
-            color: #000;
-        }
-
+        /* Map */
         #map {
-            height: 140px;
+            height: 150px;
             border-radius: 10px;
             margin-bottom: 10px;
-            border: 1px solid #333;
         }
 
+        /* Model Viewer */
+        model-viewer {
+            width: 100%;
+            height: 250px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* Link Box */
         .link-box {
             background: rgba(0, 123, 255, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 9px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 10px;
             word-break: break-all;
             color: var(--primary);
             border: 1px dashed var(--primary);
-            margin-top: 8px;
-            max-height: 60px;
+            max-height: 80px;
             overflow-y: auto;
         }
 
@@ -308,159 +265,15 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 11px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 12px;
             cursor: pointer;
             width: 100%;
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
-        #status-bar {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            z-index: 4000;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 18px;
-            border-radius: 30px;
-            font-size: 11px;
-            backdrop-filter: blur(10px);
-        }
-
-        #bottom-controls {
-            position: fixed;
-            bottom: 25px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            z-index: 4000;
-            pointer-events: none;
-        }
-
-        .ar-btn {
-            padding: 16px 40px;
-            border-radius: 50px;
-            font-weight: 700;
-            border: none;
-            cursor: pointer;
-            display: none;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-            pointer-events: auto;
-            font-size: 14px;
-        }
-
-        #reticle {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            border: 2px solid var(--scan);
-            border-radius: 50%;
-            display: none;
-            z-index: 3000;
-        }
-
-        #reticle::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 8px;
-            height: 8px;
-            background: var(--scan);
-            border-radius: 50%;
-        }
-
-        #splash {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .splash-title {
-            font-size: 26px;
-            font-weight: 800;
-            letter-spacing: 3px;
-            margin-bottom: 8px;
-        }
-
-        .splash-subtitle {
-            color: #555;
-            font-size: 13px;
-            margin-bottom: 40px;
-        }
-
-        .splash-btn {
-            background: white;
-            color: #0d0d1a;
-            padding: 18px 50px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 15px;
-            border: none;
-            cursor: pointer;
-        }
-
-        #scan-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: linear-gradient(rgba(0, 242, 255, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 255, 0.06) 1px, transparent 1px);
-            background-size: 50px 50px;
-            display: none;
-            z-index: 2;
-            pointer-events: none;
-            animation: gridPulse 2.5s infinite alternate;
-        }
-
-        @keyframes gridPulse {
-            from {
-                opacity: 0.1;
-            }
-
-            to {
-                opacity: 0.5;
-            }
-        }
-
-        .color-input-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-        }
-
-        .color-input-wrapper label {
-            font-size: 11px;
-            color: #888;
-            flex: 1;
-        }
-
-        input[type="color"] {
-            width: 40px;
-            height: 30px;
-            padding: 0;
-            border: none;
-            cursor: pointer;
-        }
-
+        /* Tabs */
         .tabs {
             display: flex;
             gap: 5px;
@@ -469,10 +282,10 @@
 
         .tab {
             flex: 1;
-            padding: 10px;
+            padding: 12px 8px;
             text-align: center;
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 11px;
             cursor: pointer;
             transition: 0.2s;
@@ -482,433 +295,287 @@
             background: var(--primary);
             color: white;
         }
+
+        /* Coords Display */
+        .coords {
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Color Input */
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .color-row label {
+            font-size: 12px;
+            color: #888;
+            flex: 1;
+        }
+
+        input[type="color"] {
+            width: 40px;
+            height: 30px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
     </style>
 </head>
 
 <body>
-
-    <div id="splash">
-        <div class="splash-title">AR STUDIO PRO</div>
-        <div class="splash-subtitle">Profesyonel AR İçerik Yönetimi</div>
-        <button class="splash-btn" onclick="startSystem()">SİSTEMİ BAŞLAT</button>
+    <div class="header">
+        <h1>🏗️ AR Studio Pro</h1>
+        <p>iOS & Android Uyumlu AR Yönetimi</p>
     </div>
 
-    <button id="menu-btn" onclick="toggleMenu()">☰</button>
-    <div id="status-bar">🛰️ <span id="gps-status">GPS Bekleniyor...</span> | 📐 <span id="distance">0</span>m</div>
-
-    <!-- Merkez Nişangah -->
-    <div id="reticle"></div>
-
-    <!-- Yerleştirme Butonu -->
-    <div id="bottom-controls">
-        <button id="place-btn" class="ar-btn" style="background: var(--success); color: #fff; display: none;"
-            onclick="placeObject()">📍 BAKTIĞIM YERE YERLEŞTİR</button>
-    </div>
-
-    <div id="admin-panel">
-        <div class="panel-header">🏗️ AR Stüdyo Pro</div>
-
+    <div class="main">
         <!-- Proje Seçimi -->
-        <div class="section">
-            <div class="section-title">Proje Yönetimi</div>
+        <div class="card">
+            <div class="card-title">Proje Yönetimi</div>
             <select id="proj-select" onchange="loadProject(this.value)">
                 <option value="">-- Proje Seçin --</option>
             </select>
-            <button class="btn btn-primary" onclick="createProject()">+ Yeni Proje</button>
+            <button class="btn btn-primary" onclick="createProject()">+ Yeni Proje Oluştur</button>
         </div>
 
-        <div id="editor" style="display: none;">
+        <!-- Editor -->
+        <div id="editor" class="hidden">
+            <!-- Model Önizleme -->
+            <model-viewer id="preview-model" src="" ar ar-modes="quick-look webxr scene-viewer" ar-scale="fixed"
+                ar-placement="floor" camera-controls auto-rotate shadow-intensity="1" environment-image="neutral"
+                alt="Model Önizleme">
+                <button slot="ar-button" class="btn btn-success"
+                    style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: auto; padding: 10px 20px;">
+                    📱 AR'da Test Et
+                </button>
+            </model-viewer>
 
-            <!-- TABS -->
+            <!-- Tabs -->
             <div class="tabs">
                 <div class="tab active" onclick="showTab('basic')">📋 Temel</div>
                 <div class="tab" onclick="showTab('transform')">🔄 Dönüşüm</div>
-                <div class="tab" onclick="showTab('material')">🎨 Görünüm</div>
-                <div class="tab" onclick="showTab('advanced')">⚙️ Gelişmiş</div>
+                <div class="tab" onclick="showTab('visual')">🎨 Görünüm</div>
             </div>
 
-            <!-- TAB: TEMEL -->
+            <!-- Tab: Temel -->
             <div id="tab-basic" class="tab-content">
-                <div class="section">
-                    <div class="section-title">Proje Bilgileri</div>
-                    <div class="card">
-                        <input type="text" id="p-name" placeholder="Proje Adı">
-                        <input type="text" id="p-model" placeholder="Model Dosyası (model.glb)">
-                        <textarea id="p-desc" placeholder="Açıklama (isteğe bağlı)"></textarea>
-                    </div>
+                <div class="card">
+                    <div class="card-title">Proje Bilgileri</div>
+                    <input type="text" id="p-name" placeholder="Proje Adı" oninput="updateField('name', this.value)">
+                    <input type="text" id="p-model" placeholder="Model URL (örn: model.glb)"
+                        oninput="updateField('model', this.value); updatePreview();">
+                    <textarea id="p-desc" placeholder="Açıklama (isteğe bağlı)"
+                        oninput="updateField('desc', this.value)"></textarea>
                 </div>
 
-                <div class="section">
-                    <div class="section-title">GPS Konumu</div>
+                <div class="card">
+                    <div class="card-title">GPS Konumu</div>
                     <div id="map"></div>
-                    <div style="font-size: 10px; color: #555; text-align: center; margin-bottom: 8px;">
-                        📍 <span id="lat-display">0</span>, <span id="lon-display">0</span>
-                    </div>
-                    <button class="btn btn-scan" onclick="useCurrentLocation()">📍 Şuanki Konumumu Kullan</button>
+                    <div class="coords">📍 <span id="lat-display">0</span>, <span id="lon-display">0</span></div>
+                    <button class="btn btn-primary" onclick="useCurrentLocation()">📍 Şuanki Konumumu Kullan</button>
                 </div>
             </div>
 
-            <!-- TAB: DÖNÜŞÜM -->
-            <div id="tab-transform" class="tab-content" style="display: none;">
-                <div class="section">
-                    <div class="section-title">Konum Ayarları</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Yükseklik</span>
-                            <input type="range" id="p-alt" min="-50" max="100" value="0" step="0.1"
-                                oninput="updateSetting('alt', this.value)">
-                            <span class="slider-value" id="v-alt">0</span>m
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Offset X</span>
-                            <input type="range" id="p-offX" min="-20" max="20" value="0" step="0.1"
-                                oninput="updateSetting('offX', this.value)">
-                            <span class="slider-value" id="v-offX">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Offset Z</span>
-                            <input type="range" id="p-offZ" min="-20" max="20" value="0" step="0.1"
-                                oninput="updateSetting('offZ', this.value)">
-                            <span class="slider-value" id="v-offZ">0</span>
-                        </div>
+            <!-- Tab: Dönüşüm -->
+            <div id="tab-transform" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-title">Ölçek</div>
+                    <div class="slider-row">
+                        <span class="slider-label">Ölçek</span>
+                        <input type="range" id="p-scale" min="0.1" max="50" value="1" step="0.1"
+                            oninput="updateSetting('scale', this.value)">
+                        <span class="slider-value" id="v-scale">1</span>
                     </div>
                 </div>
 
-                <div class="section">
-                    <div class="section-title">Ölçek</div>
-                    <div class="card">
-                        <div class="toggle-row">
-                            <span class="toggle-label">Orantılı Ölçekleme</span>
-                            <div class="toggle active" id="uniform-toggle" onclick="toggleUniform()"></div>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Ölçek</span>
-                            <input type="range" id="p-scale" min="0.1" max="100" value="10" step="0.1"
-                                oninput="updateScale('scale', this.value)">
-                            <span class="slider-value" id="v-scale">10</span>
-                        </div>
-                        <div id="non-uniform-scales" style="display: none;">
-                            <div class="slider-row">
-                                <span class="slider-label">Ölçek X</span>
-                                <input type="range" id="p-scaleX" min="0.1" max="100" value="10" step="0.1"
-                                    oninput="updateSetting('scaleX', this.value)">
-                                <span class="slider-value" id="v-scaleX">10</span>
-                            </div>
-                            <div class="slider-row">
-                                <span class="slider-label">Ölçek Y</span>
-                                <input type="range" id="p-scaleY" min="0.1" max="100" value="10" step="0.1"
-                                    oninput="updateSetting('scaleY', this.value)">
-                                <span class="slider-value" id="v-scaleY">10</span>
-                            </div>
-                            <div class="slider-row">
-                                <span class="slider-label">Ölçek Z</span>
-                                <input type="range" id="p-scaleZ" min="0.1" max="100" value="10" step="0.1"
-                                    oninput="updateSetting('scaleZ', this.value)">
-                                <span class="slider-value" id="v-scaleZ">10</span>
-                            </div>
-                        </div>
+                <div class="card">
+                    <div class="card-title">Döndürme</div>
+                    <div class="slider-row">
+                        <span class="slider-label">X Ekseni</span>
+                        <input type="range" id="p-rotX" min="0" max="360" value="0"
+                            oninput="updateSetting('rotX', this.value)">
+                        <span class="slider-value" id="v-rotX">0</span>°
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-label">Y Ekseni</span>
+                        <input type="range" id="p-rotY" min="0" max="360" value="0"
+                            oninput="updateSetting('rotY', this.value)">
+                        <span class="slider-value" id="v-rotY">0</span>°
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-label">Z Ekseni</span>
+                        <input type="range" id="p-rotZ" min="0" max="360" value="0"
+                            oninput="updateSetting('rotZ', this.value)">
+                        <span class="slider-value" id="v-rotZ">0</span>°
                     </div>
                 </div>
 
-                <div class="section">
-                    <div class="section-title">Döndürme</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Döndür X°</span>
-                            <input type="range" id="p-rotX" min="0" max="360" value="0"
-                                oninput="updateSetting('rotX', this.value)">
-                            <span class="slider-value" id="v-rotX">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Döndür Y°</span>
-                            <input type="range" id="p-rotY" min="0" max="360" value="0"
-                                oninput="updateSetting('rotY', this.value)">
-                            <span class="slider-value" id="v-rotY">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Döndür Z°</span>
-                            <input type="range" id="p-rotZ" min="0" max="360" value="0"
-                                oninput="updateSetting('rotZ', this.value)">
-                            <span class="slider-value" id="v-rotZ">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Oto Döndür</span>
-                            <input type="range" id="p-autoRot" min="0" max="10" value="0" step="0.1"
-                                oninput="updateSetting('autoRot', this.value)">
-                            <span class="slider-value" id="v-autoRot">0</span>
-                        </div>
+                <div class="card">
+                    <div class="card-title">Yükseklik</div>
+                    <div class="slider-row">
+                        <span class="slider-label">Yükseklik</span>
+                        <input type="range" id="p-alt" min="-10" max="20" value="0" step="0.1"
+                            oninput="updateSetting('alt', this.value)">
+                        <span class="slider-value" id="v-alt">0</span>m
                     </div>
                 </div>
             </div>
 
-            <!-- TAB: GÖRÜNÜM -->
-            <div id="tab-material" class="tab-content" style="display: none;">
-                <div class="section">
-                    <div class="section-title">Işıklandırma</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Ambient Işık</span>
-                            <input type="range" id="p-ambLight" min="0" max="5" value="2" step="0.1"
-                                oninput="updateSetting('ambLight', this.value)">
-                            <span class="slider-value" id="v-ambLight">2</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Yönlü Işık</span>
-                            <input type="range" id="p-dirLight" min="0" max="5" value="1.5" step="0.1"
-                                oninput="updateSetting('dirLight', this.value)">
-                            <span class="slider-value" id="v-dirLight">1.5</span>
-                        </div>
-                        <div class="color-input-wrapper">
-                            <label>Işık Rengi</label>
-                            <input type="color" id="p-lightColor" value="#ffffff"
-                                onchange="updateSetting('lightColor', this.value)">
-                        </div>
+            <!-- Tab: Görünüm -->
+            <div id="tab-visual" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-title">Işık & Gölge</div>
+                    <div class="slider-row">
+                        <span class="slider-label">Işık</span>
+                        <input type="range" id="p-ambLight" min="0" max="3" value="1" step="0.1"
+                            oninput="updateSetting('ambLight', this.value)">
+                        <span class="slider-value" id="v-ambLight">1</span>
+                    </div>
+                    <div class="toggle-row">
+                        <span class="toggle-label">Gölge</span>
+                        <div class="toggle" id="shadow-toggle" onclick="toggleShadow()"></div>
                     </div>
                 </div>
 
-                <div class="section">
-                    <div class="section-title">Gölge</div>
-                    <div class="card">
-                        <div class="toggle-row">
-                            <span class="toggle-label">Gölge Aktif</span>
-                            <div class="toggle" id="shadow-toggle" onclick="toggleShadow()"></div>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Gölge Yoğunluğu</span>
-                            <input type="range" id="p-shadowInt" min="0" max="1" value="0.5" step="0.1"
-                                oninput="updateSetting('shadowInt', this.value)">
-                            <span class="slider-value" id="v-shadowInt">0.5</span>
-                        </div>
+                <div class="card">
+                    <div class="card-title">Animasyon</div>
+                    <div class="toggle-row">
+                        <span class="toggle-label">Otomatik Döndürme</span>
+                        <div class="toggle active" id="autorot-toggle" onclick="toggleAutoRot()"></div>
                     </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Malzeme</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Opaklık</span>
-                            <input type="range" id="p-opacity" min="0" max="1" value="1" step="0.05"
-                                oninput="updateSetting('opacity', this.value)">
-                            <span class="slider-value" id="v-opacity">1</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Metalik</span>
-                            <input type="range" id="p-metalness" min="0" max="1" value="0" step="0.05"
-                                oninput="updateSetting('metalness', this.value)">
-                            <span class="slider-value" id="v-metalness">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Pürüzlülük</span>
-                            <input type="range" id="p-roughness" min="0" max="1" value="0.5" step="0.05"
-                                oninput="updateSetting('roughness', this.value)">
-                            <span class="slider-value" id="v-roughness">0.5</span>
-                        </div>
-                        <div class="color-input-wrapper">
-                            <label>Renk Tonu</label>
-                            <input type="color" id="p-tint" value="#ffffff"
-                                onchange="updateSetting('tint', this.value)">
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Işıma (Glow)</span>
-                            <input type="range" id="p-emissive" min="0" max="2" value="0" step="0.1"
-                                oninput="updateSetting('emissive', this.value)">
-                            <span class="slider-value" id="v-emissive">0</span>
-                        </div>
+                    <div class="slider-row">
+                        <span class="slider-label">Hız</span>
+                        <input type="range" id="p-autoRot" min="0" max="5" value="1" step="0.1"
+                            oninput="updateSetting('autoRot', this.value)">
+                        <span class="slider-value" id="v-autoRot">1</span>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB: GELİŞMİŞ -->
-            <div id="tab-advanced" class="tab-content" style="display: none;">
-                <div class="section">
-                    <div class="section-title">Görünürlük</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Max Mesafe</span>
-                            <input type="range" id="p-maxDist" min="10" max="1000" value="500" step="10"
-                                oninput="updateSetting('maxDist', this.value)">
-                            <span class="slider-value" id="v-maxDist">500</span>m
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Fade Mesafesi</span>
-                            <input type="range" id="p-fadeDist" min="0" max="100" value="50" step="5"
-                                oninput="updateSetting('fadeDist', this.value)">
-                            <span class="slider-value" id="v-fadeDist">50</span>m
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Davranış</div>
-                    <div class="card">
-                        <div class="toggle-row">
-                            <span class="toggle-label">Kameraya Bak (Billboard)</span>
-                            <div class="toggle" id="billboard-toggle" onclick="toggleBillboard()"></div>
-                        </div>
-                        <div class="toggle-row">
-                            <span class="toggle-label">Animasyonu Oynat</span>
-                            <div class="toggle active" id="anim-toggle" onclick="toggleAnim()"></div>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Animasyon Hızı</span>
-                            <input type="range" id="p-animSpeed" min="0.1" max="3" value="1" step="0.1"
-                                oninput="updateSetting('animSpeed', this.value)">
-                            <span class="slider-value" id="v-animSpeed">1</span>x
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Etkileşim</div>
-                    <div class="card">
-                        <input type="url" id="p-clickUrl" placeholder="Tıklanınca açılacak URL (isteğe bağlı)"
-                            onchange="updateTextSetting('clickUrl', this.value)">
-                        <input type="text" id="p-infoText" placeholder="Bilgi balonu metni (isteğe bağlı)"
-                            onchange="updateTextSetting('infoText', this.value)">
-                    </div>
-                </div>
-            </div>
-
-            <!-- KAYDET & SİL -->
-            <div class="section" style="margin-top: 15px;">
+            <!-- Kaydet & Paylaş -->
+            <div class="card">
                 <button class="btn btn-success" onclick="saveProject()">💾 KAYDET</button>
                 <button class="btn btn-danger" onclick="deleteProject()">🗑️ Projeyi Sil</button>
             </div>
 
-            <!-- PAYLAŞIM -->
-            <div class="section">
-                <div class="section-title">Paylaşım</div>
+            <div class="card">
+                <div class="card-title">Paylaşım Linki</div>
                 <div class="link-box" id="share-link">Önce kaydedin...</div>
                 <button class="copy-btn" onclick="copyLink()">📋 Linki Kopyala</button>
             </div>
         </div>
     </div>
 
-    <a-scene vr-mode-ui="enabled: false" embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true; sourceWidth: 1920; sourceHeight: 1080; displayWidth: 1920; displayHeight: 1080;"
-        renderer="antialias: true; precision: highp; alpha: true; colorManagement: true; logarithmicDepthBuffer: true;">
-
-        <a-entity id="light-amb" light="type: hemisphere; intensity: 2; color: #ffffff"></a-entity>
-        <a-entity id="light-dir" light="type: directional; intensity: 1.5; castShadow: false"
-            position="1 3 1"></a-entity>
-
-        <!-- Model - GPS Projeksiyon ile Sabit -->
-        <a-entity id="ar-model" gltf-model="" shadow="cast: false; receive: false"></a-entity>
-
-        <!-- Kamera - Çok Agresif GPS Kilidi -->
-        <a-camera gps-camera="gpsMinDistance: 25; positionMinAccuracy: 1000; gpsTimeInterval: 3000;"
-            rotation-reader></a-camera>
-    </a-scene>
-
     <script>
         // ========== VERİ ==========
         let db = JSON.parse(localStorage.getItem('ar_studio_db')) || {};
         let activeProjectId = null;
-        let myPosition = { lat: 0, lon: 0 };
 
-        // Varsayılan proje şablonu
         const defaultProject = {
-            name: '', model: 'model.glb', desc: '',
-            lat: 41.017, lon: 28.858,
-            alt: 0, offX: 0, offZ: 0,
-            scale: 10, scaleX: 10, scaleY: 10, scaleZ: 10, uniformScale: true,
-            rotX: 0, rotY: 0, rotZ: 0, autoRot: 0,
-            ambLight: 2, dirLight: 1.5, lightColor: '#ffffff',
-            shadow: false, shadowInt: 0.5,
-            opacity: 1, metalness: 0, roughness: 0.5, tint: '#ffffff', emissive: 0,
-            maxDist: 500, fadeDist: 50,
-            billboard: false, playAnim: true, animSpeed: 1,
-            clickUrl: '', infoText: ''
+            name: '', model: '', desc: '',
+            lat: 41.015, lon: 28.979,
+            scale: 1, rotX: 0, rotY: 0, rotZ: 0, alt: 0,
+            ambLight: 1, shadow: false, autoRot: true, autoRotSpeed: 1
         };
 
         // ========== HARİTA ==========
-        const map = L.map('map').setView([41.017, 28.858], 15);
+        const map = L.map('map').setView([41.015, 28.979], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        let marker = L.marker([41.017, 28.858], { draggable: true }).addTo(map);
+        let marker = L.marker([41.015, 28.979], { draggable: true }).addTo(map);
 
-        marker.on('dragend', (e) => { if (!activeProjectId) return; const pos = e.target.getLatLng(); db[activeProjectId].lat = pos.lat; db[activeProjectId].lon = pos.lng; updateCoordinateDisplay(); syncModel(); });
-        map.on('click', (e) => { if (!activeProjectId) return; marker.setLatLng(e.latlng); db[activeProjectId].lat = e.latlng.lat; db[activeProjectId].lon = e.latlng.lng; updateCoordinateDisplay(); syncModel(); });
-
-        // ========== SİSTEM ==========
-        function startSystem() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(() => finishStart()).catch(() => finishStart());
-            } else finishStart();
-        }
-
-        function finishStart() {
-            document.getElementById('splash').style.display = 'none';
-            const scene = document.querySelector('a-scene');
-            if (scene.renderer) scene.renderer.setPixelRatio(window.devicePixelRatio);
-        }
-
-        // ========== GPS ==========
-        window.addEventListener('gps-camera-update-position', (e) => {
-            myPosition.lat = e.detail.position.latitude;
-            myPosition.lon = e.detail.position.longitude;
-            document.getElementById('gps-status').innerText = `${myPosition.lat.toFixed(5)}, ${myPosition.lon.toFixed(5)}`;
-            if (activeProjectId) {
-                const dist = document.getElementById('ar-model').getAttribute('distance');
-                if (dist !== null) document.getElementById('distance').innerText = Math.round(dist);
-            }
+        marker.on('dragend', (e) => {
+            if (!activeProjectId) return;
+            const pos = e.target.getLatLng();
+            db[activeProjectId].lat = pos.lat;
+            db[activeProjectId].lon = pos.lng;
+            updateCoords();
         });
 
-        // ========== TAB SİSTEMİ ==========
-        function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-            event.target.classList.add('active');
-            document.getElementById('tab-' + tabName).style.display = 'block';
-        }
+        map.on('click', (e) => {
+            if (!activeProjectId) return;
+            marker.setLatLng(e.latlng);
+            db[activeProjectId].lat = e.latlng.lat;
+            db[activeProjectId].lon = e.latlng.lng;
+            updateCoords();
+        });
 
         // ========== PROJE İŞLEMLERİ ==========
         function createProject() {
             const name = prompt("Proje Adı:");
             if (!name) return;
             const id = 'proj_' + Date.now();
-            db[id] = { ...defaultProject, id, name, lat: myPosition.lat || 41.017, lon: myPosition.lon || 28.858 };
-            saveToStorage(); refreshProjectList(); loadProject(id);
+            db[id] = { ...defaultProject, id, name };
+
+            // GPS al
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    db[id].lat = pos.coords.latitude;
+                    db[id].lon = pos.coords.longitude;
+                    saveToStorage();
+                    loadProject(id);
+                }, () => {
+                    saveToStorage();
+                    loadProject(id);
+                });
+            } else {
+                saveToStorage();
+                loadProject(id);
+            }
+
+            refreshList();
         }
 
         function loadProject(id) {
-            if (!id) { activeProjectId = null; document.getElementById('editor').style.display = 'none'; document.getElementById('scan-btn').style.display = 'none'; return; }
+            if (!id) {
+                activeProjectId = null;
+                document.getElementById('editor').classList.add('hidden');
+                return;
+            }
+
             activeProjectId = id;
             const p = db[id];
 
-            document.getElementById('editor').style.display = 'block';
-            document.getElementById('place-btn').style.display = 'block';
-            document.getElementById('reticle').style.display = 'block';
+            document.getElementById('editor').classList.remove('hidden');
 
-            // Tüm input'ları doldur
+            // Form doldur
             document.getElementById('p-name').value = p.name || '';
             document.getElementById('p-model').value = p.model || '';
             document.getElementById('p-desc').value = p.desc || '';
 
-            // Slider ve değerleri güncelle
-            const fields = ['alt', 'offX', 'offZ', 'scale', 'scaleX', 'scaleY', 'scaleZ', 'rotX', 'rotY', 'rotZ', 'autoRot', 'ambLight', 'dirLight', 'shadowInt', 'opacity', 'metalness', 'roughness', 'emissive', 'maxDist', 'fadeDist', 'animSpeed'];
+            // Sliders
+            const fields = ['scale', 'rotX', 'rotY', 'rotZ', 'alt', 'ambLight', 'autoRot'];
             fields.forEach(f => {
                 const el = document.getElementById('p-' + f);
                 const vEl = document.getElementById('v-' + f);
-                if (el && p[f] !== undefined) { el.value = p[f]; if (vEl) vEl.innerText = p[f]; }
+                if (el && p[f] !== undefined) {
+                    el.value = p[f];
+                    if (vEl) vEl.innerText = p[f];
+                }
             });
 
-            // Renk inputları
-            if (p.lightColor) document.getElementById('p-lightColor').value = p.lightColor;
-            if (p.tint) document.getElementById('p-tint').value = p.tint;
-
-            // Text inputları
-            document.getElementById('p-clickUrl').value = p.clickUrl || '';
-            document.getElementById('p-infoText').value = p.infoText || '';
-
-            // Toggle'lar
+            // Toggles
             document.getElementById('shadow-toggle').classList.toggle('active', p.shadow);
-            document.getElementById('billboard-toggle').classList.toggle('active', p.billboard);
-            document.getElementById('anim-toggle').classList.toggle('active', p.playAnim !== false);
-            document.getElementById('uniform-toggle').classList.toggle('active', p.uniformScale !== false);
-            document.getElementById('non-uniform-scales').style.display = p.uniformScale === false ? 'block' : 'none';
+            document.getElementById('autorot-toggle').classList.toggle('active', p.autoRot !== false);
 
-            marker.setLatLng([p.lat, p.lon]); map.panTo([p.lat, p.lon]);
-            updateCoordinateDisplay(); generateShareLink(); syncModel();
+            // Harita
+            marker.setLatLng([p.lat, p.lon]);
+            map.setView([p.lat, p.lon], 15);
+            updateCoords();
+
+            // Preview
+            updatePreview();
+            generateLink();
         }
 
         function saveProject() {
@@ -916,127 +583,132 @@
             db[activeProjectId].name = document.getElementById('p-name').value;
             db[activeProjectId].model = document.getElementById('p-model').value;
             db[activeProjectId].desc = document.getElementById('p-desc').value;
-            saveToStorage(); refreshProjectList(); generateShareLink();
+            saveToStorage();
+            refreshList();
+            generateLink();
             alert("✅ Kaydedildi!");
         }
 
         function deleteProject() {
             if (!activeProjectId || !confirm("Silmek istediğinizden emin misiniz?")) return;
-            delete db[activeProjectId]; saveToStorage(); location.reload();
+            delete db[activeProjectId];
+            saveToStorage();
+            location.reload();
         }
 
-        // ========== AYAR GÜNCELLEMELERİ ==========
+        // ========== AYARLAR ==========
+        function updateField(key, value) {
+            if (!activeProjectId) return;
+            db[activeProjectId][key] = value;
+        }
+
         function updateSetting(key, value) {
             if (!activeProjectId) return;
             db[activeProjectId][key] = parseFloat(value);
             const vEl = document.getElementById('v-' + key);
             if (vEl) vEl.innerText = value;
-            syncModel();
+            updatePreview();
         }
 
-        function updateScale(key, value) {
+        function toggleShadow() {
             if (!activeProjectId) return;
-            const p = db[activeProjectId];
-            p.scale = parseFloat(value);
-            if (p.uniformScale !== false) { p.scaleX = p.scaleY = p.scaleZ = p.scale; }
-            document.getElementById('v-scale').innerText = value;
-            syncModel();
-        }
-
-        function updateTextSetting(key, value) {
-            if (!activeProjectId) return;
-            db[activeProjectId][key] = value;
-        }
-
-        function toggleShadow() { if (!activeProjectId) return; const t = document.getElementById('shadow-toggle'); t.classList.toggle('active'); db[activeProjectId].shadow = t.classList.contains('active'); syncModel(); }
-        function toggleBillboard() { if (!activeProjectId) return; const t = document.getElementById('billboard-toggle'); t.classList.toggle('active'); db[activeProjectId].billboard = t.classList.contains('active'); syncModel(); }
-        function toggleAnim() { if (!activeProjectId) return; const t = document.getElementById('anim-toggle'); t.classList.toggle('active'); db[activeProjectId].playAnim = t.classList.contains('active'); syncModel(); }
-        function toggleUniform() {
-            if (!activeProjectId) return;
-            const t = document.getElementById('uniform-toggle');
+            const t = document.getElementById('shadow-toggle');
             t.classList.toggle('active');
-            db[activeProjectId].uniformScale = t.classList.contains('active');
-            document.getElementById('non-uniform-scales').style.display = db[activeProjectId].uniformScale ? 'none' : 'block';
+            db[activeProjectId].shadow = t.classList.contains('active');
+            updatePreview();
         }
 
-        // ========== MODEL SYNC ==========
-        function syncModel() {
+        function toggleAutoRot() {
+            if (!activeProjectId) return;
+            const t = document.getElementById('autorot-toggle');
+            t.classList.toggle('active');
+            db[activeProjectId].autoRot = t.classList.contains('active');
+            updatePreview();
+        }
+
+        // ========== PREVIEW ==========
+        function updatePreview() {
             if (!activeProjectId) return;
             const p = db[activeProjectId];
-            const model = document.getElementById('ar-model');
-            const ambLight = document.getElementById('light-amb');
-            const dirLight = document.getElementById('light-dir');
+            const viewer = document.getElementById('preview-model');
 
-            model.setAttribute('gltf-model', p.model);
-            model.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lon};`);
+            if (p.model) viewer.src = p.model;
 
-            const sx = p.uniformScale !== false ? p.scale : p.scaleX;
-            const sy = p.uniformScale !== false ? p.scale : p.scaleY;
-            const sz = p.uniformScale !== false ? p.scale : p.scaleZ;
-            model.setAttribute('scale', `${sx} ${sy} ${sz}`);
-            model.setAttribute('rotation', `${p.rotX} ${p.rotY} ${p.rotZ}`);
-            model.setAttribute('position', `${p.offX} ${p.alt} ${p.offZ}`);
+            const s = p.scale || 1;
+            viewer.scale = `${s} ${s} ${s}`;
+            viewer.orientation = `${p.rotX || 0}deg ${p.rotY || 0}deg ${p.rotZ || 0}deg`;
+            viewer.exposure = p.ambLight || 1;
+            viewer.shadowIntensity = p.shadow ? 1 : 0;
 
-            ambLight.setAttribute('light', `type: hemisphere; intensity: ${p.ambLight}; color: ${p.lightColor}`);
-            dirLight.setAttribute('light', `type: directional; intensity: ${p.dirLight}; castShadow: ${p.shadow}`);
-        }
-
-        // ========== YERLEŞTİRME ==========
-        function placeObject() {
-            if (!activeProjectId) { alert("Önce bir proje seçin!"); return; }
-            if (myPosition.lat === 0) { alert("GPS bekleniyor..."); return; }
-
-            const cam = document.querySelector('[gps-camera]');
-            if (!cam) return;
-
-            const rot = cam.getAttribute('rotation');
-            const dist = 5; // 5 metre önüne yerleştir
-            const angle = rot.y * Math.PI / 180;
-            const dN = Math.cos(angle) * dist;
-            const dE = -Math.sin(angle) * dist;
-            const R = 6371000;
-
-            db[activeProjectId].lat = myPosition.lat + (dN / R) * (180 / Math.PI);
-            db[activeProjectId].lon = myPosition.lon + (dE / (R * Math.cos(myPosition.lat * Math.PI / 180))) * (180 / Math.PI);
-
-            marker.setLatLng([db[activeProjectId].lat, db[activeProjectId].lon]);
-            map.panTo([db[activeProjectId].lat, db[activeProjectId].lon]);
-            updateCoordinateDisplay();
-            syncModel();
-
-            // Haptic feedback
-            if (navigator.vibrate) navigator.vibrate(100);
-
-            alert("✅ Model baktığın yere yerleştirildi!");
-        }
-
-        function useCurrentLocation() {
-            if (myPosition.lat === 0) { alert("GPS bekleniyor..."); return; }
-            db[activeProjectId].lat = myPosition.lat;
-            db[activeProjectId].lon = myPosition.lon;
-            marker.setLatLng([myPosition.lat, myPosition.lon]);
-            map.panTo([myPosition.lat, myPosition.lon]);
-            updateCoordinateDisplay(); syncModel();
+            if (p.autoRot) {
+                viewer.setAttribute('auto-rotate', '');
+            } else {
+                viewer.removeAttribute('auto-rotate');
+            }
         }
 
         // ========== YARDIMCI ==========
-        function toggleMenu() { document.getElementById('admin-panel').classList.toggle('open'); setTimeout(() => map.invalidateSize(), 400); }
-        function updateCoordinateDisplay() { if (!activeProjectId) return; document.getElementById('lat-display').innerText = db[activeProjectId].lat.toFixed(6); document.getElementById('lon-display').innerText = db[activeProjectId].lon.toFixed(6); }
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + name).classList.remove('hidden');
 
-        function generateShareLink() {
-            if (!activeProjectId) return;
-            const p = db[activeProjectId];
-            const data = { name: p.name, model: p.model, desc: p.desc, lat: p.lat, lon: p.lon, alt: p.alt, offX: p.offX, offZ: p.offZ, scale: p.scale, scaleX: p.scaleX, scaleY: p.scaleY, scaleZ: p.scaleZ, uniformScale: p.uniformScale, rotX: p.rotX, rotY: p.rotY, rotZ: p.rotZ, autoRot: p.autoRot, ambLight: p.ambLight, dirLight: p.dirLight, lightColor: p.lightColor, shadow: p.shadow, shadowInt: p.shadowInt, opacity: p.opacity, metalness: p.metalness, roughness: p.roughness, tint: p.tint, emissive: p.emissive, maxDist: p.maxDist, fadeDist: p.fadeDist, billboard: p.billboard, playAnim: p.playAnim, animSpeed: p.animSpeed, clickUrl: p.clickUrl, infoText: p.infoText };
-            const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
-            document.getElementById('share-link').innerText = window.location.href.split('admin.html')[0] + 'index.html?data=' + encoded;
+            if (name === 'basic') setTimeout(() => map.invalidateSize(), 100);
         }
 
-        function copyLink() { navigator.clipboard.writeText(document.getElementById('share-link').innerText); alert("📋 Kopyalandı!"); }
-        function saveToStorage() { localStorage.setItem('ar_studio_db', JSON.stringify(db)); }
-        function refreshProjectList() { const s = document.getElementById('proj-select'); s.innerHTML = '<option value="">-- Proje Seçin --</option>'; for (let id in db) { const o = document.createElement('option'); o.value = id; o.innerText = db[id].name; if (id === activeProjectId) o.selected = true; s.appendChild(o); } }
+        function useCurrentLocation() {
+            if (!navigator.geolocation) { alert("GPS desteklenmiyor"); return; }
+            navigator.geolocation.getCurrentPosition((pos) => {
+                db[activeProjectId].lat = pos.coords.latitude;
+                db[activeProjectId].lon = pos.coords.longitude;
+                marker.setLatLng([pos.coords.latitude, pos.coords.longitude]);
+                map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+                updateCoords();
+            }, () => alert("Konum alınamadı"));
+        }
 
-        refreshProjectList();
-        setInterval(() => { const v = document.querySelector('video'); if (v) { v.style.zIndex = "-10"; v.style.display = "block"; v.setAttribute('playsinline', ''); } }, 1000);
+        function updateCoords() {
+            if (!activeProjectId) return;
+            document.getElementById('lat-display').innerText = db[activeProjectId].lat.toFixed(5);
+            document.getElementById('lon-display').innerText = db[activeProjectId].lon.toFixed(5);
+        }
+
+        function generateLink() {
+            if (!activeProjectId) return;
+            const p = db[activeProjectId];
+            const data = {
+                name: p.name, model: p.model, desc: p.desc,
+                lat: p.lat, lon: p.lon, alt: p.alt,
+                scale: p.scale, rotX: p.rotX, rotY: p.rotY, rotZ: p.rotZ,
+                ambLight: p.ambLight, shadow: p.shadow, autoRot: p.autoRot
+            };
+            const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
+            const base = window.location.href.replace('admin.html', 'index.html');
+            document.getElementById('share-link').innerText = base + '?data=' + encoded;
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(document.getElementById('share-link').innerText);
+            alert("📋 Link Kopyalandı!");
+        }
+
+        function saveToStorage() { localStorage.setItem('ar_studio_db', JSON.stringify(db)); }
+
+        function refreshList() {
+            const s = document.getElementById('proj-select');
+            s.innerHTML = '<option value="">-- Proje Seçin --</option>';
+            for (let id in db) {
+                const o = document.createElement('option');
+                o.value = id;
+                o.innerText = db[id].name;
+                if (id === activeProjectId) o.selected = true;
+                s.appendChild(o);
+            }
+        }
+
+        // Init
+        refreshList();
     </script>
 </body>
 
