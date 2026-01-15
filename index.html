@@ -2,381 +2,57 @@
 <html lang="tr">
 
 <head>
-    <title>AR Studio Pro - Admin Panel</title>
+    <title>AR Deneyimi</title>
     <meta charset="utf-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <style>
-        :root {
-            --primary: #007bff;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --dark: rgba(12, 12, 12, 0.97);
-            --scan: #00f2ff;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body,
         html {
-            margin: 0;
-            padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: transparent !important;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
             color: white;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        video#arjs-video {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            object-fit: cover !important;
-            z-index: -5 !important;
-        }
-
-        .a-canvas {
-            z-index: -1 !important;
-            background: transparent !important;
-        }
-
-        /* Admin Panel */
-        #admin-panel {
+        /* Kamera Video */
+        #camera-video {
             position: fixed;
-            left: 0;
             top: 0;
-            width: 340px;
+            left: 0;
+            width: 100%;
             height: 100%;
-            background: var(--dark);
-            backdrop-filter: blur(30px);
-            transform: translateX(-100%);
-            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow-y: auto;
-            box-sizing: border-box;
-            border-right: 1px solid rgba(255, 255, 255, 0.08);
-            z-index: 5000;
-            padding: 20px;
+            object-fit: cover;
+            z-index: 1;
         }
 
-        #admin-panel.open {
-            transform: translateX(0);
-        }
-
-        #admin-panel::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        #admin-panel::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 4px;
-        }
-
-        #menu-btn {
+        /* Three.js Canvas */
+        #ar-canvas {
             position: fixed;
-            left: 15px;
-            top: 15px;
-            z-index: 5001;
-            background: var(--primary);
-            color: white;
-            border: none;
-            width: 55px;
-            height: 55px;
-            border-radius: 16px;
-            font-size: 26px;
-            cursor: pointer;
-        }
-
-        .panel-header {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--scan);
-            border-bottom: 1px solid #222;
-            padding-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .section {
-            margin-bottom: 15px;
-        }
-
-        .section-title {
-            font-size: 10px;
-            font-weight: 700;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .section-title::before {
-            content: '';
-            width: 3px;
-            height: 12px;
-            background: var(--scan);
-            border-radius: 2px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 8px;
-        }
-
-        input[type="text"],
-        input[type="url"],
-        input[type="color"],
-        select,
-        textarea {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #333;
-            color: #fff;
-            padding: 12px;
-            border-radius: 10px;
+            top: 0;
+            left: 0;
             width: 100%;
-            font-size: 13px;
-            margin-bottom: 8px;
-            box-sizing: border-box;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            border-color: var(--primary);
-            outline: none;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-
-        .slider-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .slider-label {
-            font-size: 11px;
-            color: #888;
-            min-width: 80px;
-        }
-
-        .slider-value {
-            font-size: 11px;
-            color: var(--scan);
-            font-weight: 700;
-            min-width: 35px;
-            text-align: right;
-        }
-
-        input[type="range"] {
-            flex: 1;
-            height: 4px;
-            -webkit-appearance: none;
-            background: #333;
-            border-radius: 4px;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: var(--scan);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .toggle-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-        }
-
-        .toggle-label {
-            font-size: 12px;
-            color: #aaa;
-        }
-
-        .toggle {
-            width: 44px;
-            height: 24px;
-            background: #333;
-            border-radius: 30px;
-            position: relative;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .toggle.active {
-            background: var(--success);
-        }
-
-        .toggle::after {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 20px;
-            height: 20px;
-            background: white;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-
-        .toggle.active::after {
-            left: 22px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            margin-bottom: 8px;
-            transition: 0.2s;
-        }
-
-        .btn:active {
-            transform: scale(0.98);
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-danger {
-            background: transparent;
-            color: var(--danger);
-            border: 1px solid var(--danger);
-        }
-
-        .btn-scan {
-            background: var(--scan);
-            color: #000;
-        }
-
-        #map {
-            height: 140px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #333;
-        }
-
-        .link-box {
-            background: rgba(0, 123, 255, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 9px;
-            word-break: break-all;
-            color: var(--primary);
-            border: 1px dashed var(--primary);
-            margin-top: 8px;
-            max-height: 60px;
-            overflow-y: auto;
-        }
-
-        .copy-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 11px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 8px;
-        }
-
-        #status-bar {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            z-index: 4000;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 18px;
-            border-radius: 30px;
-            font-size: 11px;
-            backdrop-filter: blur(10px);
-        }
-
-        #bottom-controls {
-            position: fixed;
-            bottom: 25px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            z-index: 4000;
+            height: 100%;
+            z-index: 2;
             pointer-events: none;
         }
 
-        .ar-btn {
-            padding: 16px 40px;
-            border-radius: 50px;
-            font-weight: 700;
-            border: none;
-            cursor: pointer;
-            display: none;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-            pointer-events: auto;
-            font-size: 14px;
-        }
-
-        #reticle {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            border: 2px solid var(--scan);
-            border-radius: 50%;
-            display: none;
-            z-index: 3000;
-        }
-
-        #reticle::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 8px;
-            height: 8px;
-            background: var(--scan);
-            border-radius: 50%;
-        }
-
+        /* Splash */
         #splash {
             position: fixed;
             top: 0;
@@ -384,655 +60,627 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
-            z-index: 9999;
+            z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
+            padding: 30px;
+        }
+
+        .splash-icon {
+            font-size: 70px;
+            margin-bottom: 15px;
         }
 
         .splash-title {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
-            letter-spacing: 3px;
             margin-bottom: 8px;
         }
 
-        .splash-subtitle {
-            color: #555;
+        .splash-desc {
+            color: #666;
             font-size: 13px;
-            margin-bottom: 40px;
+            max-width: 300px;
+            line-height: 1.6;
+            margin-bottom: 30px;
         }
 
         .splash-btn {
-            background: white;
-            color: #0d0d1a;
+            background: #28a745;
+            color: white;
             padding: 18px 50px;
             border-radius: 50px;
             font-weight: 700;
             font-size: 15px;
             border: none;
             cursor: pointer;
+            box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3);
         }
 
-        #scan-grid {
+        .error-text {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+        }
+
+        /* Nişangah */
+        #reticle {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: linear-gradient(rgba(0, 242, 255, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 255, 0.06) 1px, transparent 1px);
-            background-size: 50px 50px;
-            display: none;
-            z-index: 2;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            z-index: 10;
+            border: 2px solid rgba(0, 242, 255, 0.8);
+            border-radius: 50%;
             pointer-events: none;
-            animation: gridPulse 2.5s infinite alternate;
         }
 
-        @keyframes gridPulse {
-            from {
-                opacity: 0.1;
-            }
-
-            to {
-                opacity: 0.5;
-            }
+        #reticle::before,
+        #reticle::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 242, 255, 0.8);
         }
 
-        .color-input-wrapper {
-            display: flex;
+        #reticle::before {
+            width: 2px;
+            height: 12px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #reticle::after {
+            width: 12px;
+            height: 2px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Üst Bar */
+        #top-bar {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            z-index: 20;
+            display: none;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
         }
 
-        .color-input-wrapper label {
+        .info-pill {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 50px;
             font-size: 11px;
-            color: #888;
-            flex: 1;
+            backdrop-filter: blur(10px);
         }
 
-        input[type="color"] {
-            width: 40px;
-            height: 30px;
-            padding: 0;
-            border: none;
-            cursor: pointer;
+        /* Alt Panel */
+        #bottom-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            z-index: 20;
+            display: none;
+            backdrop-filter: blur(15px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .tabs {
-            display: flex;
-            gap: 5px;
+        .panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .panel-desc {
+            font-size: 12px;
+            color: #666;
             margin-bottom: 15px;
         }
 
-        .tab {
-            flex: 1;
-            padding: 10px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: 0.2s;
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
         }
 
-        .tab.active {
-            background: var(--primary);
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #00f2ff;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #666;
+        }
+
+        /* Yön Göstergesi */
+        #direction {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 15;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .dir-arrow {
+            font-size: 50px;
+            animation: bounce 1s infinite;
+        }
+
+        .dir-text {
+            font-size: 13px;
+            margin-top: 5px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        /* Yükseklik Slider */
+        #height-control {
+            position: fixed;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #height-slider {
+            writing-mode: bt-lr;
+            -webkit-appearance: slider-vertical;
+            width: 30px;
+            height: 150px;
+        }
+
+        .height-value {
+            font-size: 12px;
+            color: #00f2ff;
+        }
+
+        /* Navigasyon Butonu */
+        .nav-btn {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.7);
             color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-size: 13px;
+            border: 1px solid #333;
+            cursor: pointer;
+            display: none;
         }
     </style>
 </head>
 
 <body>
-
+    <!-- Splash Screen -->
     <div id="splash">
-        <div class="splash-title">AR STUDIO PRO</div>
-        <div class="splash-subtitle">Profesyonel AR İçerik Yönetimi</div>
-        <button class="splash-btn" onclick="startSystem()">SİSTEMİ BAŞLAT</button>
+        <div class="splash-icon">🏗️</div>
+        <div class="splash-title" id="proj-name">Yükleniyor...</div>
+        <div class="splash-desc" id="proj-desc"></div>
+        <button class="splash-btn" id="start-btn" style="display: none;" onclick="startAR()">
+            📱 AR DENEYİMİNİ BAŞLAT
+        </button>
+        <div class="error-text" id="error-msg" style="display: none;"></div>
     </div>
 
-    <div id="scan-grid"></div>
-    <button id="menu-btn" onclick="toggleMenu()">☰</button>
-    <div id="status-bar">🛰️ <span id="gps-status">GPS Bekleniyor...</span> | 📐 <span id="distance">0</span>m</div>
-    <div id="reticle"></div>
+    <!-- Kamera -->
+    <video id="camera-video" autoplay muted playsinline></video>
 
-    <div id="bottom-controls">
-        <button id="scan-btn" class="ar-btn" style="background: var(--scan); color: #000;" onclick="startScan()">📡
-            ZEMİNİ TARA</button>
-        <button id="place-btn" class="ar-btn" style="background: var(--success); color: #fff;"
-            onclick="placeObject()">🏗️ BURAYA YERLEŞTİR</button>
+    <!-- Three.js Canvas -->
+    <canvas id="ar-canvas"></canvas>
+
+    <!-- Nişangah -->
+    <div id="reticle" style="display: none;"></div>
+
+    <!-- Üst Bar -->
+    <div id="top-bar">
+        <div class="info-pill">🛰️ <span id="gps-status">GPS Bekleniyor</span></div>
+        <div class="info-pill">🧭 <span id="compass">--°</span></div>
     </div>
 
-    <div id="admin-panel">
-        <div class="panel-header">🏗️ AR Stüdyo Pro</div>
+    <!-- Yön Göstergesi -->
+    <div id="direction">
+        <div class="dir-arrow" id="dir-arrow">⬆️</div>
+        <div class="dir-text" id="dir-text">Modele dönün</div>
+    </div>
 
-        <!-- Proje Seçimi -->
-        <div class="section">
-            <div class="section-title">Proje Yönetimi</div>
-            <select id="proj-select" onchange="loadProject(this.value)">
-                <option value="">-- Proje Seçin --</option>
-            </select>
-            <button class="btn btn-primary" onclick="createProject()">+ Yeni Proje</button>
-        </div>
+    <!-- Yükseklik Kontrolü -->
+    <div id="height-control">
+        <span class="height-value" id="height-value">0m</span>
+        <input type="range" id="height-slider" min="-5" max="10" value="0" step="0.1"
+            oninput="adjustHeight(this.value)">
+        <span style="font-size: 10px; color: #666;">Yükseklik</span>
+    </div>
 
-        <div id="editor" style="display: none;">
-
-            <!-- TABS -->
-            <div class="tabs">
-                <div class="tab active" onclick="showTab('basic')">📋 Temel</div>
-                <div class="tab" onclick="showTab('transform')">🔄 Dönüşüm</div>
-                <div class="tab" onclick="showTab('material')">🎨 Görünüm</div>
-                <div class="tab" onclick="showTab('advanced')">⚙️ Gelişmiş</div>
+    <!-- Alt Panel -->
+    <div id="bottom-panel">
+        <div class="panel-title" id="panel-title">Model</div>
+        <div class="panel-desc" id="panel-desc"></div>
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-value" id="stat-distance">--</div>
+                <div class="stat-label">Mesafe (m)</div>
             </div>
-
-            <!-- TAB: TEMEL -->
-            <div id="tab-basic" class="tab-content">
-                <div class="section">
-                    <div class="section-title">Proje Bilgileri</div>
-                    <div class="card">
-                        <input type="text" id="p-name" placeholder="Proje Adı">
-                        <input type="text" id="p-model" placeholder="Model Dosyası (model.glb)">
-                        <textarea id="p-desc" placeholder="Açıklama (isteğe bağlı)"></textarea>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">GPS Konumu</div>
-                    <div id="map"></div>
-                    <div style="font-size: 10px; color: #555; text-align: center; margin-bottom: 8px;">
-                        📍 <span id="lat-display">0</span>, <span id="lon-display">0</span>
-                    </div>
-                    <button class="btn btn-scan" onclick="useCurrentLocation()">📍 Şuanki Konumumu Kullan</button>
-                </div>
+            <div class="stat">
+                <div class="stat-value" id="stat-bearing">--°</div>
+                <div class="stat-label">Yön</div>
             </div>
-
-            <!-- TAB: DÖNÜŞÜM -->
-            <div id="tab-transform" class="tab-content" style="display: none;">
-                <div class="section">
-                    <div class="section-title">Konum Ayarları</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Yükseklik</span>
-                            <input type="range" id="p-alt" min="-50" max="100" value="0" step="0.1"
-                                oninput="updateSetting('alt', this.value)">
-                            <span class="slider-value" id="v-alt">0</span>m
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Offset X</span>
-                            <input type="range" id="p-offX" min="-20" max="20" value="0" step="0.1"
-                                oninput="updateSetting('offX', this.value)">
-                            <span class="slider-value" id="v-offX">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Offset Z</span>
-                            <input type="range" id="p-offZ" min="-20" max="20" value="0" step="0.1"
-                                oninput="updateSetting('offZ', this.value)">
-                            <span class="slider-value" id="v-offZ">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Ölçek</div>
-                    <div class="card">
-                        <div class="toggle-row">
-                            <span class="toggle-label">Orantılı Ölçekleme</span>
-                            <div class="toggle active" id="uniform-toggle" onclick="toggleUniform()"></div>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Ölçek</span>
-                            <input type="range" id="p-scale" min="0.1" max="100" value="10" step="0.1"
-                                oninput="updateScale('scale', this.value)">
-                            <span class="slider-value" id="v-scale">10</span>
-                        </div>
-                        <div id="non-uniform-scales" style="display: none;">
-                            <div class="slider-row">
-                                <span class="slider-label">Ölçek X</span>
-                                <input type="range" id="p-scaleX" min="0.1" max="100" value="10" step="0.1"
-                                    oninput="updateSetting('scaleX', this.value)">
-                                <span class="slider-value" id="v-scaleX">10</span>
-                            </div>
-                            <div class="slider-row">
-                                <span class="slider-label">Ölçek Y</span>
-                                <input type="range" id="p-scaleY" min="0.1" max="100" value="10" step="0.1"
-                                    oninput="updateSetting('scaleY', this.value)">
-                                <span class="slider-value" id="v-scaleY">10</span>
-                            </div>
-                            <div class="slider-row">
-                                <span class="slider-label">Ölçek Z</span>
-                                <input type="range" id="p-scaleZ" min="0.1" max="100" value="10" step="0.1"
-                                    oninput="updateSetting('scaleZ', this.value)">
-                                <span class="slider-value" id="v-scaleZ">10</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Döndürme</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Döndür X°</span>
-                            <input type="range" id="p-rotX" min="0" max="360" value="0"
-                                oninput="updateSetting('rotX', this.value)">
-                            <span class="slider-value" id="v-rotX">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Döndür Y°</span>
-                            <input type="range" id="p-rotY" min="0" max="360" value="0"
-                                oninput="updateSetting('rotY', this.value)">
-                            <span class="slider-value" id="v-rotY">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Döndür Z°</span>
-                            <input type="range" id="p-rotZ" min="0" max="360" value="0"
-                                oninput="updateSetting('rotZ', this.value)">
-                            <span class="slider-value" id="v-rotZ">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Oto Döndür</span>
-                            <input type="range" id="p-autoRot" min="0" max="10" value="0" step="0.1"
-                                oninput="updateSetting('autoRot', this.value)">
-                            <span class="slider-value" id="v-autoRot">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB: GÖRÜNÜM -->
-            <div id="tab-material" class="tab-content" style="display: none;">
-                <div class="section">
-                    <div class="section-title">Işıklandırma</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Ambient Işık</span>
-                            <input type="range" id="p-ambLight" min="0" max="5" value="2" step="0.1"
-                                oninput="updateSetting('ambLight', this.value)">
-                            <span class="slider-value" id="v-ambLight">2</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Yönlü Işık</span>
-                            <input type="range" id="p-dirLight" min="0" max="5" value="1.5" step="0.1"
-                                oninput="updateSetting('dirLight', this.value)">
-                            <span class="slider-value" id="v-dirLight">1.5</span>
-                        </div>
-                        <div class="color-input-wrapper">
-                            <label>Işık Rengi</label>
-                            <input type="color" id="p-lightColor" value="#ffffff"
-                                onchange="updateSetting('lightColor', this.value)">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Gölge</div>
-                    <div class="card">
-                        <div class="toggle-row">
-                            <span class="toggle-label">Gölge Aktif</span>
-                            <div class="toggle" id="shadow-toggle" onclick="toggleShadow()"></div>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Gölge Yoğunluğu</span>
-                            <input type="range" id="p-shadowInt" min="0" max="1" value="0.5" step="0.1"
-                                oninput="updateSetting('shadowInt', this.value)">
-                            <span class="slider-value" id="v-shadowInt">0.5</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Malzeme</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Opaklık</span>
-                            <input type="range" id="p-opacity" min="0" max="1" value="1" step="0.05"
-                                oninput="updateSetting('opacity', this.value)">
-                            <span class="slider-value" id="v-opacity">1</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Metalik</span>
-                            <input type="range" id="p-metalness" min="0" max="1" value="0" step="0.05"
-                                oninput="updateSetting('metalness', this.value)">
-                            <span class="slider-value" id="v-metalness">0</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Pürüzlülük</span>
-                            <input type="range" id="p-roughness" min="0" max="1" value="0.5" step="0.05"
-                                oninput="updateSetting('roughness', this.value)">
-                            <span class="slider-value" id="v-roughness">0.5</span>
-                        </div>
-                        <div class="color-input-wrapper">
-                            <label>Renk Tonu</label>
-                            <input type="color" id="p-tint" value="#ffffff"
-                                onchange="updateSetting('tint', this.value)">
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Işıma (Glow)</span>
-                            <input type="range" id="p-emissive" min="0" max="2" value="0" step="0.1"
-                                oninput="updateSetting('emissive', this.value)">
-                            <span class="slider-value" id="v-emissive">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB: GELİŞMİŞ -->
-            <div id="tab-advanced" class="tab-content" style="display: none;">
-                <div class="section">
-                    <div class="section-title">Görünürlük</div>
-                    <div class="card">
-                        <div class="slider-row">
-                            <span class="slider-label">Max Mesafe</span>
-                            <input type="range" id="p-maxDist" min="10" max="1000" value="500" step="10"
-                                oninput="updateSetting('maxDist', this.value)">
-                            <span class="slider-value" id="v-maxDist">500</span>m
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Fade Mesafesi</span>
-                            <input type="range" id="p-fadeDist" min="0" max="100" value="50" step="5"
-                                oninput="updateSetting('fadeDist', this.value)">
-                            <span class="slider-value" id="v-fadeDist">50</span>m
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Davranış</div>
-                    <div class="card">
-                        <div class="toggle-row">
-                            <span class="toggle-label">Kameraya Bak (Billboard)</span>
-                            <div class="toggle" id="billboard-toggle" onclick="toggleBillboard()"></div>
-                        </div>
-                        <div class="toggle-row">
-                            <span class="toggle-label">Animasyonu Oynat</span>
-                            <div class="toggle active" id="anim-toggle" onclick="toggleAnim()"></div>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Animasyon Hızı</span>
-                            <input type="range" id="p-animSpeed" min="0.1" max="3" value="1" step="0.1"
-                                oninput="updateSetting('animSpeed', this.value)">
-                            <span class="slider-value" id="v-animSpeed">1</span>x
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Etkileşim</div>
-                    <div class="card">
-                        <input type="url" id="p-clickUrl" placeholder="Tıklanınca açılacak URL (isteğe bağlı)"
-                            onchange="updateTextSetting('clickUrl', this.value)">
-                        <input type="text" id="p-infoText" placeholder="Bilgi balonu metni (isteğe bağlı)"
-                            onchange="updateTextSetting('infoText', this.value)">
-                    </div>
-                </div>
-            </div>
-
-            <!-- KAYDET & SİL -->
-            <div class="section" style="margin-top: 15px;">
-                <button class="btn btn-success" onclick="saveProject()">💾 KAYDET</button>
-                <button class="btn btn-danger" onclick="deleteProject()">🗑️ Projeyi Sil</button>
-            </div>
-
-            <!-- PAYLAŞIM -->
-            <div class="section">
-                <div class="section-title">Paylaşım</div>
-                <div class="link-box" id="share-link">Önce kaydedin...</div>
-                <button class="copy-btn" onclick="copyLink()">📋 Linki Kopyala</button>
+            <div class="stat">
+                <div class="stat-value" id="stat-accuracy">--</div>
+                <div class="stat-label">GPS Hata (m)</div>
             </div>
         </div>
     </div>
 
-    <a-scene vr-mode-ui="enabled: false" embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true; sourceWidth: 1920; sourceHeight: 1080; displayWidth: 1920; displayHeight: 1080;"
-        renderer="antialias: true; precision: highp; alpha: true; colorManagement: true; logarithmicDepthBuffer: true;">
-
-        <a-entity id="light-amb" light="type: hemisphere; intensity: 2; color: #ffffff"></a-entity>
-        <a-entity id="light-dir" light="type: directional; intensity: 1.5; castShadow: false"
-            position="1 3 1"></a-entity>
-        <a-entity id="ar-model" gltf-model="" shadow="cast: false; receive: false"></a-entity>
-        <a-camera gps-camera="gpsMinDistance: 3; positionMinAccuracy: 100;" rotation-reader></a-camera>
-    </a-scene>
+    <!-- Navigasyon -->
+    <button class="nav-btn" id="nav-btn" onclick="openNavigation()">🗺️ Haritada Göster</button>
 
     <script>
-        // ========== VERİ ==========
-        let db = JSON.parse(localStorage.getItem('ar_studio_db')) || {};
-        let activeProjectId = null;
-        let myPosition = { lat: 0, lon: 0 };
+        // ========== PROJE VERİSİ ==========
+        let project = null;
+        const urlParams = new URLSearchParams(window.location.search);
 
-        // Varsayılan proje şablonu
-        const defaultProject = {
-            name: '', model: 'model.glb', desc: '',
-            lat: 41.017, lon: 28.858,
-            alt: 0, offX: 0, offZ: 0,
-            scale: 10, scaleX: 10, scaleY: 10, scaleZ: 10, uniformScale: true,
-            rotX: 0, rotY: 0, rotZ: 0, autoRot: 0,
-            ambLight: 2, dirLight: 1.5, lightColor: '#ffffff',
-            shadow: false, shadowInt: 0.5,
-            opacity: 1, metalness: 0, roughness: 0.5, tint: '#ffffff', emissive: 0,
-            maxDist: 500, fadeDist: 50,
-            billboard: false, playAnim: true, animSpeed: 1,
-            clickUrl: '', infoText: ''
-        };
-
-        // ========== HARİTA ==========
-        const map = L.map('map').setView([41.017, 28.858], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        let marker = L.marker([41.017, 28.858], { draggable: true }).addTo(map);
-
-        marker.on('dragend', (e) => { if (!activeProjectId) return; const pos = e.target.getLatLng(); db[activeProjectId].lat = pos.lat; db[activeProjectId].lon = pos.lng; updateCoordinateDisplay(); syncModel(); });
-        map.on('click', (e) => { if (!activeProjectId) return; marker.setLatLng(e.latlng); db[activeProjectId].lat = e.latlng.lat; db[activeProjectId].lon = e.latlng.lng; updateCoordinateDisplay(); syncModel(); });
-
-        // ========== SİSTEM ==========
-        function startSystem() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(() => finishStart()).catch(() => finishStart());
-            } else finishStart();
+        const encodedData = urlParams.get('data');
+        if (encodedData) {
+            try {
+                project = JSON.parse(decodeURIComponent(atob(encodedData)));
+                document.getElementById('proj-name').innerText = project.name || 'AR Deneyimi';
+                document.getElementById('proj-desc').innerText = project.desc || 'Modeli görmek için başlat butonuna basın.';
+                document.getElementById('start-btn').style.display = 'block';
+                document.getElementById('panel-title').innerText = project.name || 'Model';
+                document.getElementById('panel-desc').innerText = project.desc || '';
+            } catch (e) {
+                showError('Link verileri bozuk.');
+            }
+        } else {
+            showError('Bu sayfayı açmak için admin panelinden link oluşturun.');
         }
 
-        function finishStart() {
-            document.getElementById('splash').style.display = 'none';
-            const scene = document.querySelector('a-scene');
-            if (scene.renderer) scene.renderer.setPixelRatio(window.devicePixelRatio);
+        function showError(msg) {
+            document.getElementById('proj-name').innerText = 'Hata';
+            document.getElementById('proj-desc').style.display = 'none';
+            document.getElementById('error-msg').innerText = msg;
+            document.getElementById('error-msg').style.display = 'block';
+        }
+
+        // ========== THREE.JS SETUP ==========
+        let scene, camera, renderer, model;
+        let userPosition = { lat: 0, lon: 0, accuracy: 0 };
+        let deviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
+        let compassHistory = [];
+        let modelLoaded = false;
+
+        function initThreeJS() {
+            const canvas = document.getElementById('ar-canvas');
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.6, 0); // Göz seviyesi
+
+            renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000, 0);
+            renderer.shadowMap.enabled = true;
+
+            // Işıklar
+            const ambientLight = new THREE.AmbientLight(0xffffff, project.ambLight || 1);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            directionalLight.position.set(5, 10, 5);
+            directionalLight.castShadow = project.shadow || false;
+            scene.add(directionalLight);
+
+            // Zemin (gölge için)
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Model yükle
+            loadModel();
+
+            // Animasyon döngüsü
+            animate();
+        }
+
+        function loadModel() {
+            if (!project || !project.model) return;
+
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                project.model,
+                (gltf) => {
+                    model = gltf.scene;
+
+                    // Ölçek
+                    const s = project.scale || 1;
+                    model.scale.set(s, s, s);
+
+                    // Döndürme
+                    model.rotation.set(
+                        (project.rotX || 0) * Math.PI / 180,
+                        (project.rotY || 0) * Math.PI / 180,
+                        (project.rotZ || 0) * Math.PI / 180
+                    );
+
+                    // Gölge
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+
+                    // Başlangıçta görünmez
+                    model.visible = false;
+                    scene.add(model);
+                    modelLoaded = true;
+                },
+                undefined,
+                (error) => console.error('Model yükleme hatası:', error)
+            );
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (modelLoaded && model) {
+                updateModelPosition();
+                updateCameraRotation();
+
+                // Otomatik döndürme
+                if (project.autoRot) {
+                    model.rotation.y += 0.01 * (project.autoRot || 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // ========== KAMERA ==========
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                document.getElementById('camera-video').srcObject = stream;
+            } catch (err) {
+                console.error('Kamera hatası:', err);
+                alert('Kamera açılamadı');
+            }
+        }
+
+        // ========== SENSÖRLER ==========
+        function startSensors() {
+            // iOS izin kontrolü
+            if (typeof DeviceOrientationEvent !== 'undefined' &&
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                        }
+                    });
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        }
+
+        function handleOrientation(e) {
+            // Pusula yumuşatma
+            let alpha = e.alpha || 0;
+            compassHistory.push(alpha);
+            if (compassHistory.length > 10) compassHistory.shift();
+            const smoothAlpha = compassHistory.reduce((a, b) => a + b) / compassHistory.length;
+
+            deviceOrientation = {
+                alpha: smoothAlpha,
+                beta: e.beta || 0,
+                gamma: e.gamma || 0
+            };
+
+            document.getElementById('compass').innerText = Math.round(smoothAlpha) + '°';
+        }
+
+        function updateCameraRotation() {
+            const { alpha, beta, gamma } = deviceOrientation;
+
+            // Kamera rotasyonunu sensörlere göre ayarla
+            const alphaRad = THREE.MathUtils.degToRad(alpha);
+            const betaRad = THREE.MathUtils.degToRad(beta);
+            const gammaRad = THREE.MathUtils.degToRad(gamma);
+
+            camera.rotation.order = 'YXZ';
+            camera.rotation.x = betaRad - Math.PI / 2;
+            camera.rotation.y = -alphaRad;
+            camera.rotation.z = -gammaRad;
         }
 
         // ========== GPS ==========
-        window.addEventListener('gps-camera-update-position', (e) => {
-            myPosition.lat = e.detail.position.latitude;
-            myPosition.lon = e.detail.position.longitude;
-            document.getElementById('gps-status').innerText = `${myPosition.lat.toFixed(5)}, ${myPosition.lon.toFixed(5)}`;
-            if (activeProjectId) {
-                const dist = document.getElementById('ar-model').getAttribute('distance');
-                if (dist !== null) document.getElementById('distance').innerText = Math.round(dist);
+        function startGPS() {
+            if (!navigator.geolocation) return;
+
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    userPosition = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy
+                    };
+
+                    document.getElementById('gps-status').innerText =
+                        `${userPosition.lat.toFixed(5)}, ${userPosition.lon.toFixed(5)}`;
+                    document.getElementById('stat-accuracy').innerText =
+                        Math.round(userPosition.accuracy);
+
+                    updateStats();
+                },
+                (err) => console.error('GPS hatası:', err),
+                { enableHighAccuracy: true, maximumAge: 0 }
+            );
+        }
+
+        // ========== MODEL KONUMU ==========
+        function updateModelPosition() {
+            if (!model || !project || userPosition.lat === 0) return;
+
+            // Mesafe ve yön hesapla
+            const { distance, bearing } = calculateDistanceAndBearing(
+                userPosition.lat, userPosition.lon,
+                project.lat, project.lon
+            );
+
+            // Model görünürlüğü
+            if (distance < (project.maxDist || 1000)) {
+                model.visible = true;
+
+                // Modeli kullanıcıya göre konumla
+                const bearingRad = THREE.MathUtils.degToRad(bearing);
+                const scale = Math.min(distance / 10, 10); // Mesafeye göre ölçek
+
+                model.position.x = Math.sin(bearingRad) * Math.min(distance, 50);
+                model.position.z = -Math.cos(bearingRad) * Math.min(distance, 50);
+                model.position.y = parseFloat(document.getElementById('height-slider').value);
+
+                // Yön göstergesi
+                updateDirectionIndicator(bearing);
+            } else {
+                model.visible = false;
+            }
+        }
+
+        function calculateDistanceAndBearing(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+
+            const y = Math.sin(Δλ) * Math.cos(φ2);
+            const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+            let bearing = Math.atan2(y, x) * 180 / Math.PI;
+            bearing = (bearing + 360) % 360;
+
+            return { distance, bearing };
+        }
+
+        function updateStats() {
+            if (!project || userPosition.lat === 0) return;
+
+            const { distance, bearing } = calculateDistanceAndBearing(
+                userPosition.lat, userPosition.lon,
+                project.lat, project.lon
+            );
+
+            document.getElementById('stat-distance').innerText =
+                distance < 1000 ? Math.round(distance) : (distance / 1000).toFixed(1) + 'k';
+            document.getElementById('stat-bearing').innerText = Math.round(bearing);
+        }
+
+        function updateDirectionIndicator(bearing) {
+            const userHeading = deviceOrientation.alpha;
+            let diff = bearing - userHeading;
+            while (diff > 180) diff -= 360;
+            while (diff < -180) diff += 360;
+
+            const dirEl = document.getElementById('direction');
+            if (Math.abs(diff) > 30) {
+                dirEl.style.display = 'flex';
+                document.getElementById('dir-arrow').innerText = diff > 0 ? '➡️' : '⬅️';
+                document.getElementById('dir-text').innerText = diff > 0 ? 'Sağa dönün' : 'Sola dönün';
+            } else {
+                dirEl.style.display = 'none';
+            }
+        }
+
+        // ========== KONTROLLER ==========
+        function adjustHeight(value) {
+            document.getElementById('height-value').innerText = value + 'm';
+        }
+
+        function openNavigation() {
+            if (!project) return;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${project.lat},${project.lon}`, '_blank');
+        }
+
+        // ========== BAŞLAT ==========
+        async function startAR() {
+            document.getElementById('splash').style.display = 'none';
+            document.getElementById('top-bar').style.display = 'flex';
+            document.getElementById('bottom-panel').style.display = 'block';
+            document.getElementById('reticle').style.display = 'block';
+            document.getElementById('height-control').style.display = 'flex';
+            document.getElementById('nav-btn').style.display = 'block';
+
+            await startCamera();
+            startSensors();
+            startGPS();
+            initThreeJS();
+        }
+
+        // Ekran yeniden boyutlandırma
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             }
         });
-
-        // ========== TAB SİSTEMİ ==========
-        function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-            event.target.classList.add('active');
-            document.getElementById('tab-' + tabName).style.display = 'block';
-        }
-
-        // ========== PROJE İŞLEMLERİ ==========
-        function createProject() {
-            const name = prompt("Proje Adı:");
-            if (!name) return;
-            const id = 'proj_' + Date.now();
-            db[id] = { ...defaultProject, id, name, lat: myPosition.lat || 41.017, lon: myPosition.lon || 28.858 };
-            saveToStorage(); refreshProjectList(); loadProject(id);
-        }
-
-        function loadProject(id) {
-            if (!id) { activeProjectId = null; document.getElementById('editor').style.display = 'none'; document.getElementById('scan-btn').style.display = 'none'; return; }
-            activeProjectId = id;
-            const p = db[id];
-
-            document.getElementById('editor').style.display = 'block';
-            document.getElementById('scan-btn').style.display = 'block';
-
-            // Tüm input'ları doldur
-            document.getElementById('p-name').value = p.name || '';
-            document.getElementById('p-model').value = p.model || '';
-            document.getElementById('p-desc').value = p.desc || '';
-
-            // Slider ve değerleri güncelle
-            const fields = ['alt', 'offX', 'offZ', 'scale', 'scaleX', 'scaleY', 'scaleZ', 'rotX', 'rotY', 'rotZ', 'autoRot', 'ambLight', 'dirLight', 'shadowInt', 'opacity', 'metalness', 'roughness', 'emissive', 'maxDist', 'fadeDist', 'animSpeed'];
-            fields.forEach(f => {
-                const el = document.getElementById('p-' + f);
-                const vEl = document.getElementById('v-' + f);
-                if (el && p[f] !== undefined) { el.value = p[f]; if (vEl) vEl.innerText = p[f]; }
-            });
-
-            // Renk inputları
-            if (p.lightColor) document.getElementById('p-lightColor').value = p.lightColor;
-            if (p.tint) document.getElementById('p-tint').value = p.tint;
-
-            // Text inputları
-            document.getElementById('p-clickUrl').value = p.clickUrl || '';
-            document.getElementById('p-infoText').value = p.infoText || '';
-
-            // Toggle'lar
-            document.getElementById('shadow-toggle').classList.toggle('active', p.shadow);
-            document.getElementById('billboard-toggle').classList.toggle('active', p.billboard);
-            document.getElementById('anim-toggle').classList.toggle('active', p.playAnim !== false);
-            document.getElementById('uniform-toggle').classList.toggle('active', p.uniformScale !== false);
-            document.getElementById('non-uniform-scales').style.display = p.uniformScale === false ? 'block' : 'none';
-
-            marker.setLatLng([p.lat, p.lon]); map.panTo([p.lat, p.lon]);
-            updateCoordinateDisplay(); generateShareLink(); syncModel();
-        }
-
-        function saveProject() {
-            if (!activeProjectId) return;
-            db[activeProjectId].name = document.getElementById('p-name').value;
-            db[activeProjectId].model = document.getElementById('p-model').value;
-            db[activeProjectId].desc = document.getElementById('p-desc').value;
-            saveToStorage(); refreshProjectList(); generateShareLink();
-            alert("✅ Kaydedildi!");
-        }
-
-        function deleteProject() {
-            if (!activeProjectId || !confirm("Silmek istediğinizden emin misiniz?")) return;
-            delete db[activeProjectId]; saveToStorage(); location.reload();
-        }
-
-        // ========== AYAR GÜNCELLEMELERİ ==========
-        function updateSetting(key, value) {
-            if (!activeProjectId) return;
-            db[activeProjectId][key] = parseFloat(value);
-            const vEl = document.getElementById('v-' + key);
-            if (vEl) vEl.innerText = value;
-            syncModel();
-        }
-
-        function updateScale(key, value) {
-            if (!activeProjectId) return;
-            const p = db[activeProjectId];
-            p.scale = parseFloat(value);
-            if (p.uniformScale !== false) { p.scaleX = p.scaleY = p.scaleZ = p.scale; }
-            document.getElementById('v-scale').innerText = value;
-            syncModel();
-        }
-
-        function updateTextSetting(key, value) {
-            if (!activeProjectId) return;
-            db[activeProjectId][key] = value;
-        }
-
-        function toggleShadow() { if (!activeProjectId) return; const t = document.getElementById('shadow-toggle'); t.classList.toggle('active'); db[activeProjectId].shadow = t.classList.contains('active'); syncModel(); }
-        function toggleBillboard() { if (!activeProjectId) return; const t = document.getElementById('billboard-toggle'); t.classList.toggle('active'); db[activeProjectId].billboard = t.classList.contains('active'); syncModel(); }
-        function toggleAnim() { if (!activeProjectId) return; const t = document.getElementById('anim-toggle'); t.classList.toggle('active'); db[activeProjectId].playAnim = t.classList.contains('active'); syncModel(); }
-        function toggleUniform() {
-            if (!activeProjectId) return;
-            const t = document.getElementById('uniform-toggle');
-            t.classList.toggle('active');
-            db[activeProjectId].uniformScale = t.classList.contains('active');
-            document.getElementById('non-uniform-scales').style.display = db[activeProjectId].uniformScale ? 'none' : 'block';
-        }
-
-        // ========== MODEL SYNC ==========
-        function syncModel() {
-            if (!activeProjectId) return;
-            const p = db[activeProjectId];
-            const model = document.getElementById('ar-model');
-            const ambLight = document.getElementById('light-amb');
-            const dirLight = document.getElementById('light-dir');
-
-            model.setAttribute('gltf-model', p.model);
-            model.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lon};`);
-
-            const sx = p.uniformScale !== false ? p.scale : p.scaleX;
-            const sy = p.uniformScale !== false ? p.scale : p.scaleY;
-            const sz = p.uniformScale !== false ? p.scale : p.scaleZ;
-            model.setAttribute('scale', `${sx} ${sy} ${sz}`);
-            model.setAttribute('rotation', `${p.rotX} ${p.rotY} ${p.rotZ}`);
-            model.setAttribute('position', `${p.offX} ${p.alt} ${p.offZ}`);
-
-            ambLight.setAttribute('light', `type: hemisphere; intensity: ${p.ambLight}; color: ${p.lightColor}`);
-            dirLight.setAttribute('light', `type: directional; intensity: ${p.dirLight}; castShadow: ${p.shadow}`);
-        }
-
-        // ========== TARAMA ==========
-        function startScan() {
-            if (myPosition.lat === 0) { alert("GPS bekleniyor..."); return; }
-            document.getElementById('scan-grid').style.display = 'block';
-            document.getElementById('reticle').style.display = 'block';
-            document.getElementById('scan-btn').style.display = 'none';
-            document.getElementById('place-btn').style.display = 'block';
-        }
-
-        function placeObject() {
-            if (!activeProjectId) return;
-            const cam = document.querySelector('[gps-camera]');
-            if (!cam) return;
-            const rot = cam.getAttribute('rotation');
-            const dist = 7, angle = rot.y * Math.PI / 180;
-            const dN = Math.cos(angle) * dist, dE = -Math.sin(angle) * dist, R = 6371000;
-
-            db[activeProjectId].lat = myPosition.lat + (dN / R) * (180 / Math.PI);
-            db[activeProjectId].lon = myPosition.lon + (dE / (R * Math.cos(myPosition.lat * Math.PI / 180))) * (180 / Math.PI);
-
-            marker.setLatLng([db[activeProjectId].lat, db[activeProjectId].lon]);
-            map.panTo([db[activeProjectId].lat, db[activeProjectId].lon]);
-            updateCoordinateDisplay(); syncModel();
-
-            document.getElementById('scan-grid').style.display = 'none';
-            document.getElementById('reticle').style.display = 'none';
-            document.getElementById('place-btn').style.display = 'none';
-            document.getElementById('scan-btn').style.display = 'block';
-            alert("🏗️ Yerleştirildi!");
-        }
-
-        function useCurrentLocation() {
-            if (myPosition.lat === 0) { alert("GPS bekleniyor..."); return; }
-            db[activeProjectId].lat = myPosition.lat;
-            db[activeProjectId].lon = myPosition.lon;
-            marker.setLatLng([myPosition.lat, myPosition.lon]);
-            map.panTo([myPosition.lat, myPosition.lon]);
-            updateCoordinateDisplay(); syncModel();
-        }
-
-        // ========== YARDIMCI ==========
-        function toggleMenu() { document.getElementById('admin-panel').classList.toggle('open'); setTimeout(() => map.invalidateSize(), 400); }
-        function updateCoordinateDisplay() { if (!activeProjectId) return; document.getElementById('lat-display').innerText = db[activeProjectId].lat.toFixed(6); document.getElementById('lon-display').innerText = db[activeProjectId].lon.toFixed(6); }
-
-        function generateShareLink() {
-            if (!activeProjectId) return;
-            const p = db[activeProjectId];
-            const data = { name: p.name, model: p.model, desc: p.desc, lat: p.lat, lon: p.lon, alt: p.alt, offX: p.offX, offZ: p.offZ, scale: p.scale, scaleX: p.scaleX, scaleY: p.scaleY, scaleZ: p.scaleZ, uniformScale: p.uniformScale, rotX: p.rotX, rotY: p.rotY, rotZ: p.rotZ, autoRot: p.autoRot, ambLight: p.ambLight, dirLight: p.dirLight, lightColor: p.lightColor, shadow: p.shadow, shadowInt: p.shadowInt, opacity: p.opacity, metalness: p.metalness, roughness: p.roughness, tint: p.tint, emissive: p.emissive, maxDist: p.maxDist, fadeDist: p.fadeDist, billboard: p.billboard, playAnim: p.playAnim, animSpeed: p.animSpeed, clickUrl: p.clickUrl, infoText: p.infoText };
-            const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
-            document.getElementById('share-link').innerText = window.location.href.split('admin.html')[0] + 'index.html?data=' + encoded;
-        }
-
-        function copyLink() { navigator.clipboard.writeText(document.getElementById('share-link').innerText); alert("📋 Kopyalandı!"); }
-        function saveToStorage() { localStorage.setItem('ar_studio_db', JSON.stringify(db)); }
-        function refreshProjectList() { const s = document.getElementById('proj-select'); s.innerHTML = '<option value="">-- Proje Seçin --</option>'; for (let id in db) { const o = document.createElement('option'); o.value = id; o.innerText = db[id].name; if (id === activeProjectId) o.selected = true; s.appendChild(o); } }
-
-        refreshProjectList();
-        setInterval(() => { const v = document.querySelector('video'); if (v) { v.style.zIndex = "-10"; v.style.display = "block"; v.setAttribute('playsinline', ''); } }, 1000);
     </script>
 </body>
 
