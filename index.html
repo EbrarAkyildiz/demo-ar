@@ -1,8 +1,7 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <title>İnşaat AR - Admin & Viewer</title>
+    <title>AR İnşaat - Yönetim Paneli</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
@@ -13,163 +12,261 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; background: #000; }
+        :root { --primary: #007bff; --bg: #111; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; background: #000; color: #fff; }
         
         /* --- ADMIN PANELİ (SOL) --- */
         #admin-panel {
-            position: fixed; left: 0; top: 0; width: 320px; height: 100%;
-            background: rgba(20, 20, 20, 0.95); z-index: 1000;
-            color: white; padding: 20px; box-sizing: border-box;
-            display: flex; flex-direction: column; gap: 15px;
-            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-            transition: transform 0.3s;
+            position: fixed; left: 0; top: 0; width: 350px; height: 100%;
+            background: rgba(15, 15, 15, 0.98); z-index: 2000;
+            padding: 25px; box-sizing: border-box; display: none;
+            flex-direction: column; gap: 15px; overflow-y: auto;
+            border-right: 1px solid #333; box-shadow: 20px 0 50px rgba(0,0,0,0.8);
         }
-        #admin-panel.collapsed { transform: translateX(-100%); }
-        #map { height: 200px; border-radius: 10px; margin: 10px 0; border: 1px solid #444; }
-        .control-group { background: #2a2a2a; padding: 10px; border-radius: 8px; }
-        label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; }
-        input[type="range"] { width: 100%; }
-        button { background: #0d6efd; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        #map { height: 200px; border-radius: 15px; margin: 10px 0; border: 1px solid #444; }
         
-        /* --- AR UI --- */
-        #ar-ui { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; pointer-events: none; z-index: 100; }
-        .info-box { background: rgba(0,0,0,0.7); padding: 15px 30px; border-radius: 100px; color: white; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); }
+        /* --- PROJE LİSTESİ --- */
+        .project-item { background: #222; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; cursor: pointer; }
+        .project-item.active { border-color: var(--primary); background: #2a2a2a; }
+
+        /* --- KONTROLLER --- */
+        .control-group { background: #1a1a1a; padding: 15px; border-radius: 15px; border: 1px solid #333; }
+        label { display: block; font-size: 11px; color: #aaa; margin-bottom: 8px; font-weight: bold; }
+        input, select { background: #333; border: none; color: white; padding: 10px; border-radius: 8px; width: 100%; margin-bottom: 15px; }
+        input[type="range"] { padding: 0; }
         
-        /* --- TOGGLE BUTTON --- */
-        #toggle-admin { position: fixed; left: 10px; top: 10px; z-index: 1001; background: #333; color: white; border: none; padding: 10px; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; }
-        
-        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; position: absolute; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
+        .btn:hover { background: #0056b3; }
+        .btn-green { background: #28a745; }
+        .btn-outline { background: transparent; border: 1px solid #444; margin-top: 5px; }
+
+        /* --- USER INTERFACE --- */
+        #user-welcome { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; box-sizing: border-box; }
+        #ar-nav { position: fixed; top: 15px; width: 100%; display: none; justify-content: center; z-index: 100; pointer-events: none; }
+        .nav-box { background: rgba(0,0,0,0.7); backdrop-filter: blur(15px); padding: 15px 30px; border-radius: 100px; color: white; border: 1px solid rgba(255,255,255,0.2); }
+
+        #toggle-admin { position: fixed; left: 15px; bottom: 15px; z-index: 2001; background: #333; border: none; color: white; border-radius: 50%; width: 50px; height: 50px; cursor: pointer; }
+        video { width: 100vw !important; height: 100vh !important; object-fit: cover !important; }
     </style>
 </head>
 <body>
 
-    <!-- Toggle Butonu -->
+    <!-- Admin Paneli Gizle/Göster -->
     <button id="toggle-admin">⚙️</button>
 
-    <!-- Admin Paneli -->
-    <div id="admin-panel" id="adminPanel">
-        <h3 style="margin-top:0;">İnşaat AR Admin</h3>
-        
-        <div class="control-group">
-            <label>1. KONUM SEÇ (Haritaya Tıkla)</label>
-            <div id="map"></div>
-            <div id="coords" style="font-size: 10px; color: #00ff00;">Enlem: -, Boylam: -</div>
-        </div>
-
-        <div class="control-group">
-            <label>2. OBJE AYARLARI</label>
-            <label>Dönüş (Rotation Y)</label>
-            <input type="range" id="rot-y" min="0" max="360" value="0">
-            <label>Ölçek (Scale)</label>
-            <input type="range" id="scale" min="1" max="50" value="10">
-            <label>Yükseklik (Altitude)</label>
-            <input type="range" id="alt" min="-10" max="50" value="0">
-        </div>
-
-        <div class="control-group">
-            <label>3. IŞIKLANDIRMA</label>
-            <label>Şiddet (Intensity)</label>
-            <input type="range" id="light-int" min="0" max="100" value="30">
-        </div>
-
-        <button onclick="copyConfig()">AYARLARI KOPYALA</button>
-        <p style="font-size: 9px; color: #666;">Not: Bu ayarları kopyalayıp koda yapıştırabilir veya paylaşabilirsiniz.</p>
+    <!-- Kullanıcı Karşılama -->
+    <div id="user-welcome">
+        <div style="font-size: 60px; margin-bottom: 20px;">🏗️</div>
+        <h1 id="view-title">Proje Seçilmedi</h1>
+        <p id="view-desc" style="color: #888; margin-bottom: 40px;">Artırılmış Gerçeklik İnşaat Simülasyonu</p>
+        <button class="btn" style="width: 280px; padding: 20px;" onclick="initAR()">AR DENEYİMİNİ BAŞLAT</button>
+        <p style="font-size: 11px; margin-top: 20px; color: #444;">Admin girişi için sol alttaki ikona basınız.</p>
     </div>
 
-    <!-- AR Arayüzü -->
-    <div id="ar-ui">
-        <div class="info-box" id="dist-info">Konum Bekleniyor...</div>
+    <!-- Admin Yönetim Paneli -->
+    <div id="admin-panel">
+        <h2 style="margin:0;">Proje Yönetimi</h2>
+        <p style="font-size: 12px; color: #666;">Tüm inşaat projelerinizi buradan yönetin.</p>
+
+        <div id="project-list-area">
+            <label>PROJELERİM</label>
+            <div id="project-list"></div>
+            <button class="btn btn-outline" onclick="addNewProject()">+ Yeni Proje Ekle</button>
+        </div>
+
+        <div id="editor-area" style="display:none; margin-top: 20px;">
+            <div class="control-group">
+                <label>PROJE BİLGİLERİ</label>
+                <input type="text" id="p-name" placeholder="Proje Adı">
+                <input type="text" id="p-model" placeholder="model.glb">
+                
+                <label>KONUM (Haritadan Seç)</label>
+                <div id="map"></div>
+                <div id="p-coords" style="font-size: 10px; color: #28a745;">Lütfen tıkla</div>
+            </div>
+
+            <div class="control-group" style="margin-top:15px;">
+                <label>AR İNCE AYARLAR (Canlı)</label>
+                <label>Ölçek: <span id="val-scale">10</span></label>
+                <input type="range" id="p-scale" min="1" max="100" value="10">
+                
+                <label>Yön: <span id="val-rot">0</span>°</label>
+                <input type="range" id="p-rot" min="0" max="360" value="0">
+                
+                <label>Zemin Yüksekliği: <span id="val-alt">0</span></label>
+                <input type="range" id="p-alt" min="-10" max="20" value="0" step="0.1">
+            </div>
+
+            <button class="btn btn-green" style="margin-top:15px;" onclick="saveCurrentProject()">DEĞİŞİKLİKLERİ KAYDET</button>
+            <button class="btn btn-outline" style="background: #dc3545; border:none;" onclick="deleteProject()">Projeyi Sil</button>
+            
+            <div id="link-area" style="margin-top: 15px; padding: 15px; background: #000; border-radius: 10px;">
+                <label>PAYLAŞILABİLİR SABİT LİNK:</label>
+                <div id="project-link" style="color: var(--primary); font-size: 11px; word-break: break-all; margin: 10px 0;">-</div>
+                <button class="btn" style="padding: 10px; font-size: 12px;" onclick="copyProjectLink()">Link Kopyala</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Üst Navigasyon -->
+    <div id="ar-nav">
+        <div class="nav-box" id="nav-text">Gidiliyor...</div>
     </div>
 
     <!-- AR Sahnesi -->
     <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
-        
-        <!-- Işıklar -->
-        <a-entity id="main-light" light="type: hemisphere; intensity: 3"></a-entity>
-        
-        <!-- İnşaat Modeli -->
-        <a-entity 
-            id="target-model"
-            gltf-model="url(model.glb)"
-            gps-entity-place="latitude: 41.017039; longitude: 28.858800;"
-            rotation="0 0 0"
-            scale="10 10 10"
-            position="0 0 0">
-        </a-entity>
-
+        <a-entity light="type: hemisphere; intensity: 2"></a-entity>
+        <a-entity id="main-model" gltf-model="" gps-entity-place="latitude: 0; longitude: 0;"></a-entity>
         <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
     <script>
-        // --- DEĞİŞKENLER ---
-        const model = document.querySelector('#target-model');
-        const light = document.querySelector('#main-light');
-        let currentLat = 41.017039;
-        let currentLon = 28.858800;
+        // --- VERİ YÖNETİMİ ---
+        let projects = JSON.parse(localStorage.getItem('ar_projects')) || {};
+        let activeProjectId = null;
+        let currentConfig = null;
 
-        // --- HARİTA BAŞLATMA ---
+        // --- URL KONTROLÜ (Kullanıcı için) ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlProjId = urlParams.get('id');
+
+        if (urlProjId && projects[urlProjId]) {
+            currentConfig = projects[urlProjId];
+            document.getElementById('view-title').innerText = currentConfig.name;
+        }
+
+        // --- HARİTA ---
         const map = L.map('map').setView([41.017039, 28.858800], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         let marker = L.marker([41.017039, 28.858800]).addTo(map);
 
         map.on('click', (e) => {
-            currentLat = e.latlng.lat;
-            currentLon = e.latlng.lng;
+            if (!activeProjectId) return;
+            currentConfig.lat = e.latlng.lat;
+            currentConfig.lon = e.latlng.lng;
             marker.setLatLng(e.latlng);
-            document.getElementById('coords').innerText = `Lat: ${currentLat.toFixed(6)}, Lon: ${currentLon.toFixed(6)}`;
+            document.getElementById('p-coords').innerText = `Lat: ${currentConfig.lat.toFixed(6)}, Lon: ${currentConfig.lon.toFixed(6)}`;
+            updateLiveAR();
+        });
+
+        // --- ADMIN FONKSİYONLARI ---
+        function renderProjectList() {
+            const list = document.getElementById('project-list');
+            list.innerHTML = '';
+            for (let id in projects) {
+                const div = document.createElement('div');
+                div.className = `project-item ${activeProjectId === id ? 'active' : ''}`;
+                div.innerText = projects[id].name;
+                div.onclick = () => loadProject(id);
+                list.appendChild(div);
+            }
+        }
+
+        function addNewProject() {
+            const name = prompt("Proje Adı Girin:");
+            if (!name) return;
+            const id = name.toLowerCase().replace(/\s+/g, '-');
+            projects[id] = {
+                id: id, name: name, model: 'model.glb',
+                lat: 41.017039, lon: 28.858800,
+                scale: 10, rot: 0, alt: 0
+            };
+            saveToStorage();
+            loadProject(id);
+        }
+
+        function loadProject(id) {
+            activeProjectId = id;
+            currentConfig = JSON.parse(JSON.stringify(projects[id])); // Kopya al
+            document.getElementById('view-title').innerText = currentConfig.name;
+            document.getElementById('editor-area').style.display = 'block';
             
-            // Sahnedeki Modeli Güncelle
-            model.setAttribute('gps-entity-place', `latitude: ${currentLat}; longitude: ${currentLon};`);
-        });
+            // UI Güncelle
+            document.getElementById('p-name').value = currentConfig.name;
+            document.getElementById('p-model').value = currentConfig.model;
+            document.getElementById('p-scale').value = currentConfig.scale;
+            document.getElementById('p-rot').value = currentConfig.rot;
+            document.getElementById('p-alt').value = currentConfig.alt;
+            
+            marker.setLatLng([currentConfig.lat, currentConfig.lon]);
+            map.panTo([currentConfig.lat, currentConfig.lon]);
+            
+            const link = window.location.origin + window.location.pathname + "?id=" + id;
+            document.getElementById('project-link').innerText = link;
+            
+            renderProjectList();
+            updateLiveAR();
+        }
 
-        // --- CANLI AYARLAR ---
-        document.getElementById('rot-y').addEventListener('input', (e) => {
-            model.setAttribute('rotation', `0 ${e.target.value} 0`);
-        });
+        function updateLiveAR() {
+            if (!currentConfig) return;
+            const m = document.getElementById('main-model');
+            m.setAttribute('gltf-model', `url(${currentConfig.model})`);
+            m.setAttribute('gps-entity-place', `latitude: ${currentConfig.lat}; longitude: ${currentConfig.lon};`);
+            m.setAttribute('scale', `${currentConfig.scale} ${currentConfig.scale} ${currentConfig.scale}`);
+            m.setAttribute('rotation', `0 ${currentConfig.rot} 0`);
+            m.setAttribute('position', `0 ${currentConfig.alt} 0`);
+            
+            // Slider rakamlarını güncelle
+            document.getElementById('val-scale').innerText = currentConfig.scale;
+            document.getElementById('val-rot').innerText = currentConfig.rot;
+            document.getElementById('val-alt').innerText = currentConfig.alt;
+        }
 
-        document.getElementById('scale').addEventListener('input', (e) => {
-            const s = e.target.value;
-            model.setAttribute('scale', `${s} ${s} ${s}`);
-        });
+        function saveCurrentProject() {
+            if (!activeProjectId) return;
+            currentConfig.name = document.getElementById('p-name').value;
+            currentConfig.model = document.getElementById('p-model').value;
+            projects[activeProjectId] = JSON.parse(JSON.stringify(currentConfig));
+            saveToStorage();
+            alert("Değişiklikler kaydedildi! Bu linke sahip herkes güncel halini görecek.");
+            renderProjectList();
+        }
 
-        document.getElementById('alt').addEventListener('input', (e) => {
-            // A-Frame GPS sisteminde yükseklik 'position' Y ekseni ile verilebilir (yerel simülasyon)
-            const pos = model.getAttribute('position');
-            model.setAttribute('position', `${pos.x} ${e.target.value} ${pos.z}`);
-        });
+        function deleteProject() {
+            if (!confirm("Bu projeyi silmek istediğinize emin misiniz?")) return;
+            delete projects[activeProjectId];
+            saveToStorage();
+            activeProjectId = null;
+            document.getElementById('editor-area').style.display = 'none';
+            renderProjectList();
+        }
 
-        document.getElementById('light-int').addEventListener('input', (e) => {
-            light.setAttribute('light', `intensity: ${e.target.value / 10}`);
-        });
+        function saveToStorage() {
+            localStorage.setItem('ar_projects', JSON.stringify(projects));
+        }
+
+        function copyProjectLink() {
+            navigator.clipboard.writeText(document.getElementById('project-link').innerText);
+            alert("Sabit Proje Linki Kopyalandı!");
+        }
 
         // --- UI KONTROLLERİ ---
         document.getElementById('toggle-admin').onclick = () => {
-            document.getElementById('admin-panel').classList.toggle('collapsed');
+            const p = document.getElementById('admin-panel');
+            p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
+            setTimeout(() => map.invalidateSize(), 200);
         };
 
-        function copyConfig() {
-            const config = {
-                lat: currentLat,
-                lon: currentLon,
-                rotation: model.getAttribute('rotation').y,
-                scale: model.getAttribute('scale').x,
-                altitude: model.getAttribute('position').y,
-                light: light.getAttribute('light').intensity
+        // Slider Dinleyicileri
+        ['p-scale', 'p-rot', 'p-alt'].forEach(id => {
+            document.getElementById(id).oninput = (e) => {
+                const key = id.replace('p-', '');
+                currentConfig[key] = parseFloat(e.target.value);
+                updateLiveAR();
             };
-            const json = JSON.stringify(config);
-            navigator.clipboard.writeText(json);
-            alert("Yeni ayarlar kopyalandı:\n" + json);
-        }
-
-        // --- GPS TAKİBİ ---
-        window.addEventListener('gps-camera-update-position', (e) => {
-            const dist = model.getAttribute('distance');
-            if (dist) {
-                document.getElementById('dist-info').innerText = `İnşaat: ${Math.round(dist)} Metre Mesafede`;
-            }
         });
 
-        // Video Fix
+        function initAR() {
+            if (!currentConfig) { alert("Lütfen bir proje linki ile giriş yapın."); return; }
+            document.getElementById('user-welcome').style.display = 'none';
+            document.getElementById('ar-nav').style.display = 'flex';
+            updateLiveAR();
+        }
+
+        renderProjectList();
+
+        // Tam ekran video fix
         setInterval(() => {
             const v = document.querySelector('video');
             if(v) v.style.objectFit = "cover";
