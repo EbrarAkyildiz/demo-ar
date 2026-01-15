@@ -1,161 +1,162 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <title>AR Studio Pro - LiDAR HD</title>
+    <title>AR Studio - Native LiDAR</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <!-- Kütüphaneler -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <!-- Harita için -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
-        :root { --p: #007bff; --glass: rgba(10, 10, 10, 0.9); --success: #28a745; --scan: #00f2ff; }
-        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000!important; font-family:-apple-system, sans-serif; }
+        :root { --p: #007bff; --glass: rgba(10, 10, 10, 0.9); }
+        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; font-family:sans-serif; }
         
-        /* Kamera Katmanı */
-        video#arjs-video { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; object-fit: cover !important; z-index: -5 !important; display: block !important; }
-        .a-canvas { z-index: -1 !important; background: transparent !important; }
+        /* UI Katmanları */
+        #ui-layer { position: absolute; top:0; left:0; width:100%; height:100%; z-index:100; pointer-events:none; }
+        #ui-layer * { pointer-events: auto; }
 
-        /* --- LiDAR SCAN GRID --- */
-        #scan-grid {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: 
-                linear-gradient(rgba(0, 242, 255, 0.15) 1.5px, transparent 1.5px),
-                linear-gradient(90deg, rgba(0, 242, 255, 0.15) 1.5px, transparent 1.5px);
-            background-size: 60px 60px;
-            display: none; z-index: 1000; pointer-events: none;
-            animation: gridPulse 2.5s infinite alternate;
-        }
-        @keyframes gridPulse { from { opacity: 0.1; } to { opacity: 0.6; } }
-
-        /* --- UI OVERLAY --- */
-        #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2000; }
-        #place-controls { position: fixed; bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; pointer-events: auto; }
-        .ar-btn { padding: 18px 50px; border-radius: 60px; font-weight: bold; border: none; cursor: pointer; font-size: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); transition: 0.3s transform; }
-        .ar-btn:active { transform: scale(0.95); }
-        #scan-btn { background: var(--scan); color: #000; display: none; }
-        #confirm-btn { background: var(--success); color: #fff; display: none; }
-
-        /* Nişangah (Reticle) */
-        #reticle {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80px; height: 80px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%;
-            display: none; align-items: center; justify-content: center; z-index: 1500;
-        }
-        #reticle::after { content: ''; width: 6px; height: 6px; background: red; border-radius: 50%; box-shadow: 0 0 10px red; }
-
-        /* Admin Panel */
-        #admin-panel { position:fixed; left:0; top:0; width:280px; height:100%; background:var(--glass); border-right:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(25px); z-index:3000; padding:20px; transform:translateX(-100%); transition:transform .4s cubic-bezier(0.4, 0, 0.2, 1); color: white; display:flex; flex-direction:column; box-sizing:border-box; }
+        #admin-panel { position:fixed; left:0; top:0; width:280px; height:100%; background:var(--glass); backdrop-filter:blur(20px); padding:20px; transform:translateX(-100%); transition:0.4s; overflow-y:auto; box-sizing:border-box; color:white; border-right:1px solid #333; }
         #admin-panel.open { transform:translateX(0); }
-        #menu-btn { position:fixed; left:15px; top:15px; z-index:3001; background:var(--p); color:white; border:none; width:50px; height:50px; border-radius:15px; font-size:24px; cursor: pointer; }
 
-        #status-bar { position:fixed; top: 15px; right:15px; z-index:1000; background:rgba(0,0,0,0.6); padding:8px 15px; border-radius:30px; font-size:11px; color:#fff; border:1px solid rgba(255,255,255,0.1); }
+        #menu-btn { position:fixed; left:15px; top:15px; background:var(--p); color:white; border:none; width:50px; height:50px; border-radius:12px; font-size:24px; cursor:pointer; }
         
-        #splash { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color: white; text-align: center; }
+        #overlay-msg { position:fixed; top:80px; width:100%; text-align:center; color:#00f2ff; font-weight:bold; text-shadow:0 0 10px #000; font-size:14px; }
         
-        .card { background:rgba(255,255,255,0.05); padding:12px; border-radius:15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; }
-        input, select { background:rgba(0,0,0,0.5); border:1px solid #333; color:#fff; padding:10px; border-radius:8px; width:100%; margin-bottom:10px; box-sizing:border-box; }
-        #map { height:140px; border-radius:10px; margin-bottom:10px; border: 1px solid #444; }
+        .ar-btn { position:fixed; bottom:40px; left:50%; transform:translateX(-50%); padding:18px 45px; border-radius:50px; background:#00f2ff; color:#000; border:none; font-weight:bold; font-size:16px; box-shadow:0 0 20px rgba(0,242,255,0.4); display:none; }
+
+        .card { background:rgba(255,255,255,0.05); padding:10px; border-radius:12px; margin-bottom:10px; }
+        #map { height:150px; border-radius:10px; margin-bottom:10px; }
+        input, select { background:#222; color:#fff; border:1px solid #444; width:100%; padding:10px; border-radius:8px; margin-bottom:10px; box-sizing:border-box; }
+        
+        #splash { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; text-align:center; }
     </style>
 </head>
 <body>
 
-    <div id="scan-grid"></div>
-
     <div id="splash">
-        <h1 style="letter-spacing: 5px; margin-bottom: 5px;">AR STUDIO PRO</h1>
-        <p style="color:#666; font-size: 14px; margin-bottom: 40px;">LiDAR Scan & HD Rendering Active</p>
-        <button class="ar-btn" style="background:#fff; color:#000" onclick="startSystem()">SİSTEMİ BAŞLAT</button>
+        <h1>NATIVE AR PRO</h1>
+        <p style="color:#666; margin-bottom:30px;">Zemin Tarama Teknolojisi</p>
+        <button onclick="startAR()" style="padding:20px 50px; border-radius:50px; border:none; background:#fff; font-weight:bold; cursor:pointer;">AR'I BAŞLAT</button>
     </div>
 
-    <button id="menu-btn" onclick="toggleMenu()">☰</button>
-    <div id="reticle"></div>
+    <div id="ui-layer">
+        <button id="menu-btn" onclick="toggleMenu()">☰</button>
+        <div id="overlay-msg">Zemini tarayın ve noktayı seçin</div>
+        <button id="place-btn" class="ar-btn" onclick="confirmPlacement()">🏗️ BURAYA YERLEŞTİR</button>
 
-    <div id="ui-overlay">
-        <div id="place-controls">
-            <button id="scan-btn" class="ar-btn" onclick="startScan()">📡 ZEMİNİ TARA</button>
-            <button id="confirm-btn" class="ar-btn" onclick="placeObject()">🏗️ BURAYA YERLEŞTİR</button>
-        </div>
-    </div>
-
-    <div id="status-bar">🛰️ GPS: <span id="gps">Bekleniyor...</span> | 📐: <span id="dist">0</span>m</div>
-
-    <div id="admin-panel">
-        <h3 style="margin-top:0; color:var(--scan);">Proje Stüdyosu</h3>
-        <label style="font-size:10px; color:#888;">AKTİF PROJE</label>
-        <select id="proj-select" onchange="loadProj(this.value)"></select>
-        <button onclick="addNew()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; margin-bottom:15px; cursor:pointer;">+ YENİ OLUŞTUR</button>
-        
-        <div id="editor" style="display:none">
-            <div class="card">
+        <div id="admin-panel">
+            <h3>Proje Yönetimi</h3>
+            <select id="proj-select" onchange="selectProj(this.value)"></select>
+            <button onclick="addNew()" style="width:100%; padding:10px; outline:none; border:none; background:#333; color:#fff; border-radius:8px; margin-bottom:15px;">+ YENİ EKLE</button>
+            
+            <div id="editor" style="display:none">
                 <input type="text" id="p-name" placeholder="Proje Adı">
-                <input type="text" id="p-model" placeholder="model.glb">
                 <div id="map"></div>
+                <div class="card">
+                    <label style="font-size:10px; color:#888;">ÖLÇEK: <span id="v-s">10</span></label>
+                    <input type="range" id="p-scale" min="1" max="100" value="10" style="width:100%">
+                    <label style="font-size:10px; color:#888; margin-top:5px; display:block">YÜKSEKLİK: <span id="v-a">0</span></label>
+                    <input type="range" id="p-alt" min="-10" max="25" value="0" step="0.1" style="width:100%">
+                </div>
+                <button onclick="save()" style="width:100%; padding:15px; background:#28a745; color:#fff; border:none; border-radius:10px; font-weight:bold;">KAYDET</button>
+                <div id="p-link" style="font-size:8px; color:#007bff; margin-top:10px; word-break:break-all;"></div>
             </div>
-            <div class="card">
-                <label style="font-size:10px; color:#888;">BÜYÜKLÜK: <span id="v-s">10</span></label>
-                <input type="range" id="p-scale" min="1" max="100" value="10" style="width:100%">
-                <label style="font-size:10px; color:#888; margin-top:5px; display:block">DÖNÜŞ: <span id="v-r">0</span>°</label>
-                <input type="range" id="p-rot" min="0" max="360" value="0" style="width:100%">
-            </div>
-            <button onclick="save()" style="width:100%; padding:15px; background:var(--success); color:#fff; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">AYARLARI KAYDET</button>
-            <button onclick="delProj()" style="width:100%; background:transparent; color:#ff4444; border:none; margin-top:10px; font-size:11px; cursor:pointer;">Projeyi Sil</button>
-            <div id="p-link" style="font-size:8px; color:var(--p); margin-top:15px; word-break:break-all;"></div>
         </div>
     </div>
 
+    <!-- WebXR Sahnesi (Video Yok, Sahne Şeffaf) -->
     <a-scene 
+        webxr="requiredFeatures: hit-test, local-floor; optionalFeatures: dom-overlay; overlayElement: #ui-layer;"
         vr-mode-ui="enabled: false"
-        embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true; sourceWidth:1920; sourceHeight:1080; displayWidth:1920; displayHeight:1080;"
-        renderer="antialias: true; precision: highp; logarithmicDepthBuffer: true; colorManagement: true; alpha: true;">
+        renderer="antialias: true; alpha: true;">
         
-        <a-entity light="type: hemisphere; intensity: 2"></a-entity>
-        <a-entity light="type: directional; intensity: 1.5;" position="1 2 1"></a-entity>
-        
-        <a-entity id="ar-obj" gltf-model=""></a-entity>
-        
-        <a-camera gps-camera rotation-reader></a-camera>
+        <a-assets id="assets"></a-assets>
+
+        <!-- Zemin Tespit Halkası (Reticle) -->
+        <a-entity id="reticle" visible="false">
+            <a-ring color="#00f2ff" radius-inner="0.08" radius-outer="0.1" rotation="-90 0 0"></a-ring>
+            <a-circle color="#00f2ff" radius="0.01" rotation="-90 0 0" opacity="0.5"></a-circle>
+        </a-entity>
+
+        <!-- Yerleşecek Model -->
+        <a-entity id="ar-obj" visible="false"></a-entity>
+
+        <a-entity light="type: hemisphere; intensity: 1.5"></a-entity>
+        <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
     </a-scene>
 
     <script>
         let db = JSON.parse(localStorage.getItem('ar_db')) || {};
-        let activeId = null; let myPos = { lat: 0, lon: 0 };
+        let activeId = null;
+        let myPos = { lat: 0, lon: 0 };
+        let currentHitPoint = null;
 
         const map = L.map('map').setView([41.017, 28.858], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         let marker = L.marker([41.017, 28.858]).addTo(map);
 
-        function startSystem() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(res => { finishStart(); }).catch(finishStart);
-            } else finishStart();
-        }
-
-        function finishStart() { 
-            document.getElementById('splash').style.display='none'; 
+        async function startAR() {
+            document.getElementById('splash').style.display = 'none';
             const scene = document.querySelector('a-scene');
-            if(scene.renderer) scene.renderer.setPixelRatio(window.devicePixelRatio);
+            scene.enterVR(); // WebXR AR moduna girer
         }
 
-        // --- SCAN & PLACE LOGIC ---
-        function startScan() {
-            if(myPos.lat === 0) { alert("GPS Bekleniyor..."); return; }
-            document.getElementById('scan-grid').style.display = 'block';
-            document.getElementById('reticle').style.display = 'flex';
-            document.getElementById('scan-btn').style.display = 'none';
-            document.getElementById('confirm-btn').style.display = 'block';
-            if (window.navigator.vibrate) window.navigator.vibrate([30, 50, 30]);
-        }
+        // GPS Takibi
+        navigator.geolocation.watchPosition(p => {
+            myPos.lat = p.coords.latitude; myPos.lon = p.coords.longitude;
+            if(!activeId) { map.setView([myPos.lat, myPos.lon], 17); marker.setLatLng([myPos.lat, myPos.lon]); }
+        }, err => console.error(err), { enableHighAccuracy: true });
 
-        function placeObject() {
-            const cam = document.querySelector('[gps-camera]');
-            const rot = cam.getAttribute('rotation');
-            const dist = 7; // QuickLook gibi 7m ileriye koyar
-            const angle = (rot.y) * Math.PI / 180;
+        // WebXR Hit-Test (Zemin Tespiti) Döngüsü
+        const reticle = document.getElementById('reticle');
+        const planeBtn = document.getElementById('place-btn');
+        const msg = document.getElementById('overlay-msg');
+
+        document.querySelector('a-scene').addEventListener('enter-vr', () => {
+            const session = document.querySelector('a-scene').xrSession;
+            session.requestReferenceSpace('viewer').then(refSpace => {
+                session.requestHitTestSource({ space: refSpace }).then(source => {
+                    window.hitTestSource = source;
+                });
+            });
+        });
+
+        document.querySelector('a-scene').addEventListener('renderstart', () => {
+            const frame = document.querySelector('a-scene').frame;
+            const session = document.querySelector('a-scene').xrSession;
+            if (!session || !window.hitTestSource) return;
+
+            const hitTestResults = frame.getHitTestResults(window.hitTestSource);
+            if (hitTestResults.length > 0) {
+                const hit = hitTestResults[0];
+                const referenceSpace = document.querySelector('a-scene').renderer.xr.getReferenceSpace();
+                const pose = hit.getPose(referenceSpace);
+
+                reticle.setAttribute('visible', 'true');
+                reticle.setAttribute('position', pose.transform.position);
+                currentHitPoint = pose.transform.position;
+                
+                if(activeId) planeBtn.style.display = 'block';
+                msg.innerText = "Zemin Tespit Edildi!";
+            } else {
+                reticle.setAttribute('visible', 'false');
+                planeBtn.style.display = 'none';
+                msg.innerText = "Zemini Taramaya Devam Edin...";
+            }
+        });
+
+        function confirmPlacement() {
+            if(!activeId || !currentHitPoint) return;
+            
+            // WebXR koordinatlarını (metre) GPS'e çevirme simülasyonu
+            // (Karmaşık math: Mevcut GPS + Kamera Açısı + Mesafe)
+            const scene = document.querySelector('a-scene');
+            const cam = scene.camera.el.getAttribute('rotation');
+            const dist = Math.sqrt(currentHitPoint.x**2 + currentHitPoint.z**2);
+            const angle = (cam.y) * Math.PI / 180;
+            
             const dN = Math.cos(angle) * dist;
             const dE = -Math.sin(angle) * dist;
             const R = 6371000;
@@ -163,74 +164,36 @@
             db[activeId].lat = myPos.lat + (dN / R) * (180 / Math.PI);
             db[activeId].lon = myPos.lon + (dE / (R * Math.cos(myPos.lat * Math.PI / 180))) * (180 / Math.PI);
             
+            save();
             marker.setLatLng([db[activeId].lat, db[activeId].lon]);
             map.panTo([db[activeId].lat, db[activeId].lon]);
-            sync();
-
-            document.getElementById('scan-grid').style.display = 'none';
-            document.getElementById('reticle').style.display = 'none';
-            document.getElementById('confirm-btn').style.display = 'none';
-            document.getElementById('scan-btn').style.display = 'block';
-            if (window.navigator.vibrate) window.navigator.vibrate(200);
+            
+            const obj = document.getElementById('ar-obj');
+            obj.setAttribute('visible', 'true');
+            obj.setAttribute('position', currentHitPoint);
+            obj.setAttribute('gltf-model', db[activeId].model);
+            obj.setAttribute('scale', `${db[activeId].scale/10} ${db[activeId].scale/10} ${db[activeId].scale/10}`);
+            
+            alert("İnşaat Başarıyla GPS'e Çivilendi!");
         }
 
-        function loadProj(id) {
-            if(!id) { location.reload(); return; }
-            activeId = id; 
-            document.getElementById('editor').style.display='block';
-            document.getElementById('scan-btn').style.display='block';
-            const p = db[id];
-            document.getElementById('p-name').value = p.name;
-            document.getElementById('p-model').value = p.model;
-            document.getElementById('p-scale').value = p.scale;
-            document.getElementById('v-s').innerText = p.scale;
-            marker.setLatLng([p.lat, p.lon]); map.panTo([p.lat, p.lon]);
-            document.getElementById('p-link').innerText = window.location.href.split('admin.html')[0] + 'index.html?id=' + id;
-            sync();
-        }
-
-        function sync() {
-            if(!activeId) return;
+        function toggleMenu() { document.getElementById('admin-panel').classList.toggle('open'); setTimeout(()=>map.invalidateSize(),400); }
+        function selectProj(id) { if(!id) return; activeId = id; document.getElementById('editor').style.display='block'; loadEditor(); }
+        function loadEditor() {
             const p = db[activeId];
-            const el = document.getElementById('ar-obj');
-            el.setAttribute('gltf-model', p.model);
-            el.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lon};`);
-            el.setAttribute('scale', `${p.scale} ${p.scale} ${p.scale}`);
-            el.setAttribute('rotation', `0 ${p.rot} 0`);
-            el.setAttribute('position', `0 ${p.alt} 0`);
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-scale').value = p.scale;
+            marker.setLatLng([p.lat, p.lon]); map.panTo([p.lat, p.lon]);
+            document.getElementById('p-link').innerText = window.location.href.split('admin.html')[0] + 'index.html?id=' + activeId;
         }
-
-        // --- GPS UPDATE ---
-        window.addEventListener('gps-camera-update-position', (e) => {
-            myPos.lat = e.detail.position.latitude; myPos.lon = e.detail.position.longitude;
-            document.getElementById('gps').innerText = `${myPos.lat.toFixed(5)},${myPos.lon.toFixed(5)}`;
-            if(activeId) {
-                const d = document.getElementById('ar-obj').getAttribute('distance');
-                if(d!==null) document.getElementById('dist').innerText = Math.round(d);
-            }
-        });
-
-        // --- UTILS ---
-        function toggleMenu() { document.getElementById('admin-panel').classList.toggle('open'); setTimeout(() => map.invalidateSize(), 400); }
-        function save() { localStorage.setItem('ar_db', JSON.stringify(db)); alert("AYARLAR KAYDEDİLDİ!"); }
-        function addNew() { const n = prompt("Proje Adı:"); if(!n) return; const id = 'p' + Date.now(); db[id] = {id:id, name:n, model:'model.glb', lat:41.017, lon:28.858, scale:10, rot:0, alt:0}; save(); location.reload(); }
-        function delProj() { if(confirm("Silmek istediğine emin misin?")) { delete db[activeId]; save(); location.reload(); } }
-
-        document.getElementById('p-scale').oninput = (e) => { db[activeId].scale = e.target.value; document.getElementById('v-s').innerText = e.target.value; sync(); };
-        document.getElementById('p-rot').oninput = (e) => { db[activeId].rot = e.target.value; document.getElementById('v-r').innerText = e.target.value; sync(); };
-
+        function save() { localStorage.setItem('ar_db', JSON.stringify(db)); }
+        function addNew() { const n = prompt("Ad:"); if(!n) return; const id = 'p' + Date.now(); db[id] = {id:id, name:n, model:'model.glb', lat:41.017, lon:28.858, scale:10, rot:0, alt:0}; save(); location.reload(); }
+        
         refreshList();
         function refreshList() { 
-            const c = document.getElementById('proj-select'); c.innerHTML = '<option value="">-- Seçiniz --</option>';
+            const c = document.getElementById('proj-select'); c.innerHTML = '<option value="">-- Proje Seç --</option>';
             for(let id in db) { const o = document.createElement('option'); o.value = id; o.innerText = db[id].name; c.appendChild(o); } 
         }
-
-        setInterval(() => {
-            const v = document.getElementById('arjs-video');
-            if(v) { v.style.zIndex = "-5"; v.style.display = "block"; }
-            const s = document.querySelector('a-scene');
-            if(s && s.renderer && s.renderer.getPixelRatio() !== window.devicePixelRatio) s.renderer.setPixelRatio(window.devicePixelRatio);
-        }, 1000);
     </script>
 </body>
 </html>
