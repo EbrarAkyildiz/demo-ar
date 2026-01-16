@@ -612,6 +612,66 @@
             font-size: 13px;
             color: var(--text-secondary);
         }
+
+        /* Admin Place Button & Reticle */
+        .admin-place-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: var(--accent);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            border: none;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .admin-place-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+            background: var(--cyan);
+        }
+
+        .reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .reticle::before,
+        .reticle::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .reticle::before {
+            width: 2px;
+            height: 10px;
+            left: 50%;
+            top: -15px;
+            transform: translateX(-50%);
+        }
+
+        .reticle::after {
+            width: 10px;
+            height: 2px;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
     </style>
 </head>
 
@@ -660,8 +720,18 @@
                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none;"></video>
                     <!-- 3D Canvas -->
                     <canvas id="preview-canvas" style="position: relative; z-index: 2;"></canvas>
+
+                    <!-- Nişangah (Sadece Kamera Modunda) -->
+                    <div id="preview-reticle" class="reticle hidden"></div>
+
                     <!-- Mod Badge -->
                     <div class="preview-badge" id="mode-badge">3D Önizleme</div>
+
+                    <!-- Yerleştirme Butonu (Sadece Kamera Modunda) -->
+                    <button id="admin-place-btn" class="admin-place-btn hidden" onclick="placeModelAtGPS()">
+                        📍 Buraya Yerleştir
+                    </button>
+
                     <!-- Kontroller -->
                     <div class="preview-controls">
                         <button class="preview-control-btn" onclick="togglePreviewMode()" id="mode-btn"
@@ -952,6 +1022,10 @@
                     // Grid'i gizle
                     if (gridHelper) gridHelper.visible = false;
 
+                    // Nişangah ve Butonu Göster
+                    document.getElementById('preview-reticle').classList.remove('hidden');
+                    document.getElementById('admin-place-btn').classList.remove('hidden');
+
                     modeBtn.innerText = '🎮';
                     modeBadge.innerText = '📷 Kamera AR';
                     modeBadge.style.background = 'rgba(99,102,241,0.8)';
@@ -971,9 +1045,58 @@
                 // Grid'i göster
                 if (gridHelper) gridHelper.visible = true;
 
+                // Nişangah ve Butonu Gizle
+                document.getElementById('preview-reticle').classList.add('hidden');
+                document.getElementById('admin-place-btn').classList.add('hidden');
+
                 modeBtn.innerText = '📷';
                 modeBadge.innerText = '3D Önizleme';
                 modeBadge.style.background = 'rgba(0,0,0,0.6)';
+            }
+        }
+
+        function placeModelAtGPS() {
+            if (!activeProjectId) return;
+
+            if (navigator.geolocation) {
+                const btn = document.getElementById('admin-place-btn');
+                const originalText = btn.innerText;
+                btn.innerText = "⏳ Konum Alınıyor...";
+                btn.disabled = true;
+
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        db[activeProjectId].lat = latitude;
+                        db[activeProjectId].lon = longitude;
+
+                        // UI Güncelle
+                        updateCoords();
+                        if (marker) marker.setLatLng([latitude, longitude]);
+                        if (map) map.setView([latitude, longitude], 17);
+
+                        btn.innerText = "✅ Yerleştirildi!";
+                        btn.style.background = "var(--green)";
+
+                        // Otomatik Kaydet
+                        saveToStorage();
+
+                        setTimeout(() => {
+                            btn.innerText = originalText;
+                            btn.style.background = "var(--accent)";
+                            btn.disabled = false;
+                        }, 2000);
+
+                        showToast("Konum başarıyla güncellendi ve kaydedildi!", "#10b981");
+                    },
+                    (err) => {
+                        console.error("GPS Hatası:", err);
+                        alert("GPS konumu alınamadı. İzin verildiğinden emin olun.");
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    },
+                    { enableHighAccuracy: true }
+                );
             }
         }
 
@@ -1225,13 +1348,7 @@
             saveToStorage();
             refreshList();
             generateLink();
-
-            // Toast notification
-            const toast = document.createElement('div');
-            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#10b981;color:white;padding:12px 24px;border-radius:30px;font-size:14px;font-weight:600;z-index:9999;';
-            toast.innerText = '✓ Kaydedildi!';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
+            showToast('✓ Kaydedildi!', '#10b981');
         }
 
         function deleteProject() {
@@ -1302,13 +1419,17 @@
             document.getElementById('share-link').innerText = window.location.href.replace('admin.html', 'index.html') + '?data=' + encoded;
         }
 
-        function copyLink() {
-            navigator.clipboard.writeText(document.getElementById('share-link').innerText);
+        function showToast(msg, color = "#6366f1") {
             const toast = document.createElement('div');
-            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#6366f1;color:white;padding:12px 24px;border-radius:30px;font-size:14px;font-weight:600;z-index:9999;';
-            toast.innerText = '📋 Link Kopyalandı!';
+            toast.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:${color};color:white;padding:12px 24px;border-radius:30px;font-size:14px;font-weight:600;z-index:9999;box-shadow: 0 10px 20px rgba(0,0,0,0.2);`;
+            toast.innerText = msg;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(document.getElementById('share-link').innerText);
+            showToast("📋 Link Kopyalandı!");
         }
 
         function saveToStorage() { localStorage.setItem('ar_studio_db', JSON.stringify(db)); }
