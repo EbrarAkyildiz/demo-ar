@@ -263,6 +263,7 @@
         #height-slider {
             writing-mode: bt-lr;
             -webkit-appearance: slider-vertical;
+            appearance: slider-vertical;
             width: 30px;
             height: 150px;
         }
@@ -270,6 +271,30 @@
         .height-value {
             font-size: 12px;
             color: #00f2ff;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 80%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: #00f2ff;
+            transition: width 0.3s;
+        }
+
+        #loading-text {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
         }
 
         /* Navigasyon Butonu */
@@ -292,11 +317,16 @@
 </head>
 
 <body>
-    <!-- Splash Screen -->
     <div id="splash">
         <div class="splash-icon">🏗️</div>
         <div class="splash-title" id="proj-name">Yükleniyor...</div>
         <div class="splash-desc" id="proj-desc"></div>
+
+        <div class="progress-container" id="prog-cont" style="display: block; margin: 20px auto; width: 80%;">
+            <div class="progress-bar" id="prog-bar"></div>
+        </div>
+        <div id="loading-text" style="color: #666; font-size: 11px; margin-top: 8px;">Veriler alınıyor...</div>
+
         <button class="splash-btn" id="start-btn" style="display: none;" onclick="startAR()">
             📱 AR DENEYİMİNİ BAŞLAT
         </button>
@@ -365,10 +395,10 @@
             try {
                 project = JSON.parse(decodeURIComponent(atob(encodedData)));
                 document.getElementById('proj-name').innerText = project.name || 'AR Deneyimi';
-                document.getElementById('proj-desc').innerText = project.desc || 'Modeli görmek için başlat butonuna basın.';
-                document.getElementById('start-btn').style.display = 'block';
+                document.getElementById('proj-desc').innerText = project.desc || 'Model yükleniyor, lütfen bekleyin...';
                 document.getElementById('panel-title').innerText = project.name || 'Model';
                 document.getElementById('panel-desc').innerText = project.desc || '';
+                document.getElementById('loading-text').innerText = "Model indiriliyor...";
             } catch (e) {
                 showError('Link verileri bozuk.');
             }
@@ -474,13 +504,24 @@
                     model.position.set(0, project.alt || 0, -5); // 5m önde
                     scene.add(model);
                     modelLoaded = true;
+
+                    document.getElementById('prog-bar').style.width = '100%';
+                    document.getElementById('loading-text').innerText = "Model hazır!";
+                    document.getElementById('start-btn').style.display = 'block';
+                    document.getElementById('prog-cont').style.display = 'none';
                     console.log('Model yüklendi!');
                 },
                 (progress) => {
-                    console.log('Model yükleniyor:', Math.round(progress.loaded / progress.total * 100) + '%');
+                    if (progress.lengthComputable) {
+                        const percent = Math.round(progress.loaded / progress.total * 100);
+                        document.getElementById('prog-bar').style.width = percent + '%';
+                        document.getElementById('loading-text').innerText = `İndiriliyor: %${percent}`;
+                    }
                 },
                 (error) => {
                     console.error('Model yükleme hatası:', error);
+                    document.getElementById('loading-text').innerText = "Model yüklenemedi. Test küpü hazırlanıyor.";
+                    document.getElementById('loading-text').style.color = "#ff4d4d";
                     // Hata durumunda varsayılan küp
                     const geometry = new THREE.BoxGeometry(1, 1, 1);
                     const material = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
@@ -488,6 +529,7 @@
                     model.position.set(0, 0, -5);
                     scene.add(model);
                     modelLoaded = true;
+                    document.getElementById('start-btn').style.display = 'block';
                 }
             );
         }
