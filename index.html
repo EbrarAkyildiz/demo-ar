@@ -389,6 +389,8 @@
         let deviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
         let compassHistory = [];
         let modelLoaded = false;
+        let targetModelPosition = new THREE.Vector3(0, 0, -5);
+        let lastUserLat = 0, lastUserLon = 0;
 
         function initThreeJS() {
             const canvas = document.getElementById('ar-canvas');
@@ -429,7 +431,18 @@
         }
 
         function loadModel() {
-            if (!project || !project.model) return;
+            if (!project || !project.model) {
+                console.log('Model URL yok, varsayılan küp gösteriliyor');
+                // Varsayılan test küpü
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshStandardMaterial({ color: 0x6366f1, metalness: 0.3, roughness: 0.7 });
+                model = new THREE.Mesh(geometry, material);
+                model.position.set(0, 0, -5); // Kameranın 5m önünde
+                model.castShadow = true;
+                scene.add(model);
+                modelLoaded = true;
+                return;
+            }
 
             const loader = new THREE.GLTFLoader();
             loader.load(
@@ -456,13 +469,26 @@
                         }
                     });
 
-                    // Başlangıçta görünmez
-                    model.visible = false;
+                    // HEMEN GÖRÜNÜR ve kameranın önünde
+                    model.visible = true;
+                    model.position.set(0, project.alt || 0, -5); // 5m önde
                     scene.add(model);
                     modelLoaded = true;
+                    console.log('Model yüklendi!');
                 },
-                undefined,
-                (error) => console.error('Model yükleme hatası:', error)
+                (progress) => {
+                    console.log('Model yükleniyor:', Math.round(progress.loaded / progress.total * 100) + '%');
+                },
+                (error) => {
+                    console.error('Model yükleme hatası:', error);
+                    // Hata durumunda varsayılan küp
+                    const geometry = new THREE.BoxGeometry(1, 1, 1);
+                    const material = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
+                    model = new THREE.Mesh(geometry, material);
+                    model.position.set(0, 0, -5);
+                    scene.add(model);
+                    modelLoaded = true;
+                }
             );
         }
 
@@ -571,31 +597,54 @@
 
         // ========== MODEL KONUMU ==========
         function updateModelPosition() {
-            if (!model || !project || userPosition.lat === 0) return;
+            if (!model || !project) return;
 
-            // Mesafe ve yön hesapla
-            const { distance, bearing } = calculateDistanceAndBearing(
-                userPosition.lat, userPosition.lon,
-                project.lat, project.lon
-            );
+            const heightValue = parseFloat(document.getElementById('height-slider').value) || 0;
+            let isVisible = false;
 
-            // Model görünürlüğü
-            if (distance < (project.maxDist || 1000)) {
-                model.visible = true;
+            // Konum değişikliği kontrolü (Jitter önleme)
+            if (userPosition.lat !== 0 && project.lat) {
+                const { distance, bearing } = calculateDistanceAndBearing(
+                    userPosition.lat, userPosition.lon,
+                    project.lat, project.lon
+                );
 
-                // Modeli kullanıcıya göre konumla
-                const bearingRad = THREE.MathUtils.degToRad(bearing);
-                const scale = Math.min(distance / 10, 10); // Mesafeye göre ölçek
+                const maxDist = project.maxDist || 1000;
 
-                model.position.x = Math.sin(bearingRad) * Math.min(distance, 50);
-                model.position.z = -Math.cos(bearingRad) * Math.min(distance, 50);
-                model.position.y = parseFloat(document.getElementById('height-slider').value);
+                if (distance < maxDist) {
+                    isVisible = true;
 
-                // Yön göstergesi
-                updateDirectionIndicator(bearing);
-            } else {
-                model.visible = false;
+                    const latDiff = Math.abs(userPosition.lat - lastUserLat);
+                    const lonDiff = Math.abs(userPosition.lon - lastUserLon);
+
+                    // 1 metre eşiği (0.00001 derece ~1.1m) veya ilk kez konum alınıyorsa
+                    if (latDiff > 0.00001 || lonDiff > 0.00001 || lastUserLat === 0) {
+                        const bearingRad = THREE.MathUtils.degToRad(bearing);
+                        const visualDist = Math.min(distance, 50); // Görsel stabilite için
+
+                        targetModelPosition.x = Math.sin(bearingRad) * visualDist;
+                        targetModelPosition.z = -Math.cos(bearingRad) * visualDist;
+
+                        lastUserLat = userPosition.lat;
+                        lastUserLon = userPosition.lon;
+
+                        updateDirectionIndicator(bearing);
+                    }
+                } else {
+                    isVisible = false;
+                }
+            } else if (lastUserLat === 0) {
+                // GPS yoksa veya henüz alınmadıysa önde tut (Test modu)
+                isVisible = true;
+                targetModelPosition.x = 0;
+                targetModelPosition.z = -5;
             }
+
+            targetModelPosition.y = heightValue;
+
+            // Yumuşak geçiş (Interpolation) - Titremeyi engeller
+            model.position.lerp(targetModelPosition, 0.05);
+            model.visible = isVisible;
         }
 
         function calculateDistanceAndBearing(lat1, lon1, lat2, lon2) {
