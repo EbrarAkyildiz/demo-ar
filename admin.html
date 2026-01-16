@@ -335,6 +335,7 @@
             width: 100%;
             height: 6px;
             -webkit-appearance: none;
+            appearance: none;
             background: var(--bg-secondary);
             border-radius: 10px;
             cursor: pointer;
@@ -342,6 +343,7 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
+            appearance: none;
             width: 20px;
             height: 20px;
             background: linear-gradient(135deg, var(--accent) 0%, var(--cyan) 100%);
@@ -694,8 +696,26 @@
                     </div>
                     <div class="input-group">
                         <label class="input-label">3D MODEL URL</label>
-                        <input type="url" id="p-model" placeholder="https://example.com/model.glb"
-                            oninput="updateField('model', this.value); loadPreviewModel();">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="url" id="p-model" placeholder="https://example.com/model.glb"
+                                style="margin-bottom: 0;"
+                                oninput="updateField('model', this.value); loadPreviewModel();">
+                            <select id="p-samples" style="width: 120px; margin-bottom: 0;"
+                                onchange="if(this.value) { document.getElementById('p-model').value=this.value; updateField('model', this.value); loadPreviewModel(); }">
+                                <option value="">Örnekler</option>
+                                <option
+                                    value="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb">
+                                    Ördek</option>
+                                <option
+                                    value="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">
+                                    Kask</option>
+                                <option
+                                    value="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF-Binary/Avocado.glb">
+                                    Avokado</option>
+                            </select>
+                        </div>
+                        <div id="model-status" style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;">
+                            Model yüklenmedi</div>
                     </div>
                     <div class="input-group">
                         <label class="input-label">AÇIKLAMA</label>
@@ -946,6 +966,7 @@
 
                 // Sahne arka planını geri getir
                 previewScene.background = new THREE.Color(0x0f0f15);
+                previewRenderer.setClearColor(0x0f0f15, 1);
 
                 // Grid'i göster
                 if (gridHelper) gridHelper.visible = true;
@@ -987,7 +1008,7 @@
             previewCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
             previewCamera.position.set(3, 2, 3);
 
-            previewRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            previewRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
             previewRenderer.setSize(container.clientWidth, container.clientHeight);
             previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             previewRenderer.shadowMap.enabled = true;
@@ -1010,6 +1031,16 @@
 
             // Varsayılan örnek küp ekle
             addDefaultCube();
+
+            // Resize Observer to handle visibility changes
+            const resizeObserver = new ResizeObserver(() => {
+                if (container.clientWidth > 0 && container.clientHeight > 0) {
+                    previewCamera.aspect = container.clientWidth / container.clientHeight;
+                    previewCamera.updateProjectionMatrix();
+                    previewRenderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+            resizeObserver.observe(container);
 
             animatePreview();
         }
@@ -1044,16 +1075,21 @@
             if (!activeProjectId) return;
 
             const modelUrl = db[activeProjectId].model;
+            const statusEl = document.getElementById('model-status');
 
             // Model URL yoksa varsayılan küp göster
             if (!modelUrl || modelUrl.trim() === '') {
                 if (previewModel) previewScene.remove(previewModel);
                 addDefaultCube();
                 updatePreviewTransform();
+                statusEl.innerText = "Model URL girilmedi, varsayılan küp gösteriliyor.";
+                statusEl.style.color = "var(--text-secondary)";
                 return;
             }
 
             if (previewModel) previewScene.remove(previewModel);
+            statusEl.innerText = "Yükleniyor...";
+            statusEl.style.color = "var(--cyan)";
 
             const loader = new THREE.GLTFLoader();
             loader.load(
@@ -1063,17 +1099,33 @@
                     updatePreviewTransform();
                     previewScene.add(previewModel);
 
-                    // Auto-fit camera
+                    // Auto-fit camera logic
                     const box = new THREE.Box3().setFromObject(previewModel);
+                    const center = box.getCenter(new THREE.Vector3());
                     const size = box.getSize(new THREE.Vector3());
+
                     const maxDim = Math.max(size.x, size.y, size.z);
-                    previewCamera.position.set(maxDim * 2, maxDim, maxDim * 2);
-                    previewControls.target.set(0, size.y / 2, 0);
+                    const fov = previewCamera.fov * (Math.PI / 180);
+                    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                    cameraZ *= 2.5; // Biraz daha geri al (padding)
+
+                    previewCamera.position.set(cameraZ, cameraZ, cameraZ);
+                    previewControls.target.copy(center);
+                    previewControls.update();
+
+                    statusEl.innerText = "📦 Model başarıyla yüklendi!";
+                    statusEl.style.color = "var(--green)";
                 },
-                undefined,
+                (xhr) => {
+                    if (xhr.lengthComputable) {
+                        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                        statusEl.innerText = `Yükleniyor: %${percent}`;
+                    }
+                },
                 (error) => {
                     console.error('Model yüklenemedi:', error);
-                    // Hata durumunda varsayılan küp göster
+                    statusEl.innerText = "❌ Model yüklenemedi! (CORS veya URL hatası)";
+                    statusEl.style.color = "var(--red)";
                     addDefaultCube();
                     updatePreviewTransform();
                 }
